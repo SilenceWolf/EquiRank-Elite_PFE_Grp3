@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Prédiction PFE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Palette plus vive : saturation +20%, luminosité ajustée pour
+     ressortir sur le noir profond. Mêmes hues, juste plus marquées. */
+  --gold:        #F5C341;
+  --gold-light:  #FFDA66;
+  --gold-dim:    rgba(245,195,65,0.18);
+  --gold-border: rgba(245,195,65,0.42);
+  --cyan:        #3DD9FF;
+  --cyan-dim:    rgba(61,217,255,0.15);
+  --err:         #FF3D3D;
+  --ok:          #38E373;
+  --bg:  #000000;
+  --bg2: #0A0D14;
+  --bg3: #131722;
+  --text:       #F5F2E8;
+  --text-muted: rgba(245,242,232,0.92);
+  --text-dim:   rgba(245,242,232,0.72);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  scroll-behavior: smooth;
+  /* Fond noir DUR sur <html> aussi pour éviter tout flash blanc
+     pendant le chargement ou quand la fenêtre est plus grande que le body. */
+  background: var(--bg);
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  overflow-x: hidden;
+  cursor: default;
+  min-height: 100vh;
+}
+/* Fond noir plein — pas de quadrillage, pour laisser ressortir
+   les accents dorés et cyan. */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1rem, 5vw, 3rem);
+  height: 64px;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--gold-border);
+}
+.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--text); }
+.nav-logo span { color: var(--gold); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-cta { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 20px; border: 1px solid var(--gold); color: var(--gold); background: transparent; cursor: pointer; font-family: 'Rajdhani', sans-serif; transition: background 0.2s; }
+.nav-cta:hover { background: var(--gold-dim); }
+.nav-burger { display: none; background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; }
+.hero { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px clamp(1rem, 5vw, 4rem) 4rem; overflow: hidden; }
+.hero-glow { position: absolute; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(245,195,65,0.08) 0%, transparent 70%); pointer-events: none; animation: breathe 6s ease-in-out infinite; }
+@keyframes breathe { 0%,100%{transform:scale(1);opacity:0.7} 50%{transform:scale(1.1);opacity:1} }
+.hero-eyebrow { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--cyan); margin-bottom: 1rem; animation: fadeUp 0.8s ease both; }
+.hero-logo-img { width: clamp(120px, 25vw, 200px); margin-bottom: 1.5rem; animation: fadeUp 0.8s 0.1s ease both; filter: drop-shadow(0 0 30px rgba(245,195,65,0.4)); }
+.hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(52px, 12vw, 110px); letter-spacing: 6px; line-height: 0.9; color: var(--text); animation: fadeUp 0.8s 0.2s ease both; }
+.hero-title .gold { color: var(--gold); }
+.hero-title .elite { display: block; font-size: clamp(18px, 4vw, 36px); letter-spacing: 14px; color: var(--gold); margin-top: 0.3em; }
+.hero-sub { font-family: 'Montserrat', sans-serif; font-size: clamp(13px, 2vw, 15px); font-weight: 300; color: var(--text-muted); max-width: 520px; line-height: 1.8; margin: 1.5rem auto 2.5rem; animation: fadeUp 0.8s 0.3s ease both; }
+.hero-divider { display: flex; align-items: center; gap: 12px; margin-bottom: 2.5rem; animation: fadeUp 0.8s 0.35s ease both; }
+.hero-divider span { width: 40px; height: 1px; background: var(--gold-border); }
+.hero-divider i { font-size: 11px; color: var(--gold); letter-spacing: 3px; font-style: normal; }
+.hero-btn { display: inline-block; padding: 14px 48px; background: var(--gold); color: var(--bg); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; border: none; cursor: pointer; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; animation: fadeUp 0.8s 0.4s ease both; }
+.hero-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,195,65,0.35); }
+.hero-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(1.5rem, 3vw, 2.5rem); margin-top: 2.5rem; animation: fadeUp 0.8s 0.5s ease both; }
+.hero-stat { text-align: center; }
+.hero-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: clamp(28px, 5vw, 42px); color: var(--gold); letter-spacing: 2px; }
+.hero-stat-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+section { position: relative; z-index: 1; padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 4rem); }
+.section-tag { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.5rem; }
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px, 6vw, 56px); letter-spacing: 4px; color: var(--text); margin-bottom: 1rem; }
+.section-title span { color: var(--gold); }
+.section-line { width: 60px; height: 1px; background: var(--gold); margin-bottom: 2rem; }
+#predictor { max-width: 860px; margin: 0 auto; }
+.predictor-header { text-align: center; margin-bottom: 3rem; }
+.predictor-header .section-line { margin: 0 auto 2rem; }
+.pred-card { background: var(--bg2); border: 1px solid var(--gold-border); padding: clamp(1.5rem, 4vw, 2.5rem); position: relative; overflow: hidden; }
+.pred-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media(max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+.field { position: relative; }
+.field label { display: block; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.field input, .field select { width: 100%; padding: 12px 16px; background: var(--bg3); border: 1px solid rgba(245,195,65,0.2); color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 500; transition: border-color 0.2s; -webkit-appearance: none; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--gold); background: rgba(245,195,65,0.04); }
+.field input::placeholder { color: var(--text-dim); }
+.field select option { background: var(--bg2); }
+.autocomplete-list {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--bg2); border: 1px solid var(--gold-border);
+  border-top: none; max-height: 220px; overflow-y: auto;
+  z-index: 50;
+}
+.autocomplete-item {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.autocomplete-item:hover, .autocomplete-item.active { background: rgba(245,195,65,0.08); color: var(--gold); }
+.btn-predict { width: 100%; padding: 16px; background: transparent; border: 1px solid var(--gold); color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 4px; cursor: pointer; transition: background 0.2s, box-shadow 0.2s, transform 0.15s; margin-top: 8px; }
+.btn-predict:hover { background: var(--gold-dim); box-shadow: 0 0 20px rgba(245,195,65,0.15); }
+.btn-predict:active { transform: scale(0.99); }
+.btn-predict:disabled { opacity: 0.4; cursor: not-allowed; }
+.loader { display: none; justify-content: center; align-items: center; gap: 8px; padding: 2rem; }
+.loader.on { display: flex; }
+.loader-ring { width: 36px; height: 36px; border: 2px solid var(--gold-border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+.error-msg { display: none; text-align: center; font-size: 13px; letter-spacing: 1px; color: #FF3D3D; padding: 1rem; }
+.error-msg.on { display: block; }
+.result { display: none; margin-top: 2rem; animation: fadeUp 0.5s ease both; }
+.result.on { display: block; }
+.res-header { background: linear-gradient(135deg, var(--bg3), rgba(245,195,65,0.06)); border: 1px solid var(--gold-border); border-bottom: none; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.res-duo-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(22px, 4vw, 32px); letter-spacing: 3px; color: var(--text); }
+.res-duo-name span { color: var(--gold); }
+.res-badge { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 5px 14px; border: 1px solid var(--cyan); color: var(--cyan); }
+.res-proba-block { background: var(--bg2); border: 1px solid var(--gold-border); border-bottom: none; padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+.res-pct { font-family: 'Bebas Neue', sans-serif; font-size: clamp(52px, 10vw, 80px); color: var(--gold); letter-spacing: 2px; line-height: 1; min-width: 130px; text-align: center; }
+.res-bar-area { flex: 1; min-width: 200px; }
+.res-bar-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.res-bar-bg { height: 10px; background: var(--bg3); border: 1px solid rgba(245,195,65,0.15); overflow: hidden; margin-bottom: 10px; }
+.res-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-light), var(--gold)); width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+.res-verdict { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+.res-verdict.high { color: #38E373; }
+.res-verdict.mid { color: var(--gold); }
+.res-verdict.low { color: #FF3D3D; }
+.res-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); border: 1px solid var(--gold-border); }
+.res-stat { padding: 1.25rem 1.5rem; border-right: 1px solid var(--gold-border); border-bottom: 1px solid var(--gold-border); }
+.res-stat:last-child { border-right: none; }
+.res-stat-label { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.res-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--text); }
+.res-stat-val.gold { color: var(--gold); }
+.res-stat-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.compat-pips { display: flex; gap: 5px; margin-top: 6px; }
+.pip { width: 10px; height: 10px; border: 1px solid rgba(245,195,65,0.3); }
+.pip.on { background: var(--gold); border-color: var(--gold); }
+.model-tag { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); margin-top: 6px; }
+#how { background: var(--bg2); }
+.how-inner { max-width: 900px; margin: 0 auto; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; }
+.step { padding: 2rem 1.5rem; border: 1px solid var(--gold-border); border-right: none; border-bottom: none; position: relative; }
+.step:last-child { border-right: 1px solid var(--gold-border); }
+.step-num { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--gold-border); line-height: 1; margin-bottom: 1rem; }
+.step-title { font-size: 16px; font-weight: 600; letter-spacing: 1px; margin-bottom: 0.5rem; color: var(--gold); }
+.step-text { font-size: 14px; color: var(--text-muted); line-height: 1.7; font-family: 'Montserrat', sans-serif; font-weight: 300; }
+.features { max-width: 900px; margin: 0 auto; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: var(--gold-border); border: 1px solid var(--gold-border); }
+.feat { padding: 2rem 1.5rem; background: var(--bg2); transition: background 0.2s; }
+.feat:hover { background: var(--bg3); }
+.feat-icon { font-size: 24px; color: var(--gold); margin-bottom: 1rem; }
+.feat-title { font-size: 16px; font-weight: 600; letter-spacing: 1px; margin-bottom: 0.5rem; color: var(--text); }
+.feat-text { font-size: 13px; font-family: 'Montserrat', sans-serif; font-weight: 300; color: var(--text-muted); line-height: 1.7; }
+footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border); padding: 2rem clamp(1rem, 5vw, 4rem); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: var(--bg2); }
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; color: var(--text); }
+.footer-logo span { color: var(--gold); }
+.footer-copy { font-size: 13px; letter-spacing: 1px; color: var(--text-muted); font-family: 'Montserrat', sans-serif; }
+@media (max-width: 720px) {
+  .nav-links { display: none; }
+  .nav-cta { display: none; }
+  .nav-burger { display: block; }
+  .step { border-right: 1px solid var(--gold-border); }
+  .step:last-child { border-bottom: 1px solid var(--gold-border); }
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold-border); }
+</style>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="#predictor" class="active">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <a href="/datasets" class="nav-cta" style="text-decoration:none;">📦 Datasets</a>
+  <button class="nav-burger" onclick="this.textContent = this.textContent==='☰'?'✕':'☰'">☰</button>
+</nav>
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-eyebrow">Intelligence Prédictive Équestre — PFE</div>
+  <img src="/logo.png" alt="EquiRank Elite" class="hero-logo-img">
+  <h1 class="hero-title">
+    Equi<span class="gold">Rank</span>
+    <span class="elite">— Elite —</span>
+  </h1>
+  <div class="hero-divider">
+    <span></span>
+    <i>ANALYSE · PRÉDICTION · PERFORMANCE</i>
+    <span></span>
+  </div>
+  <p class="hero-sub">
+    Saisissez un duo cavalier / cheval issu de la base FFE et obtenez en quelques secondes
+    une analyse complète appuyée sur le modèle LightGBM entraîné lors du PFE.
+  </p>
+  <a href="#predictor" class="hero-btn">Lancer une analyse</a>
+  <div class="hero-stats" id="heroStats">
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="stat-pct">—</div>
+      <div class="hero-stat-label">Précision modèle</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="stat-duos">—</div>
+      <div class="hero-stat-label">Duos analysés</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="stat-chevaux">—</div>
+      <div class="hero-stat-label">Chevaux</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="stat-cavaliers">—</div>
+      <div class="hero-stat-label">Cavaliers</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num" id="stat-disc">—</div>
+      <div class="hero-stat-label">Disciplines</div>
+    </div>
+  </div>
+</section>
+<section id="predictor">
+  <div class="predictor-header">
+    <div class="section-tag">Moteur de prédiction</div>
+    <h2 class="section-title">Analysez votre <span>duo</span></h2>
+    <div class="section-line"></div>
+  </div>
+
+  <!-- Bandeau "Dataset actif" — sert à voir d'où viennent les
+       prédictions (snapshot default OU snapshot d'un crawl spécifique). -->
+  <div id="activeSnapBar" style="
+        display:none;
+        max-width:860px; margin:0 auto 1rem;
+        padding:0.6rem 1rem;
+        background: var(--bg2);
+        border: 1px solid var(--gold-border);
+        font-size: 13px; letter-spacing: 1px; color: var(--text-muted);
+        display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <span>📦 Modèle actif : <strong id="activeSnapLabel" style="color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1.5px;">…</strong></span>
+    <a href="/datasets" style="color: var(--cyan); text-decoration: none; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;">Changer →</a>
+  </div>
+
+  <div class="pred-card">
+    <div class="form-grid">
+      <div class="field">
+        <label>Nom du cheval</label>
+        <input type="text" id="horse" autocomplete="off" placeholder="ex: FALCO DES VIALETTES">
+        <div class="autocomplete-list" id="horse-list" style="display:none"></div>
+      </div>
+      <div class="field">
+        <label>Nom du cavalier <span style="color:var(--text);font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;">(optionnel — laisser vide pour les épreuves sans cavalier nominatif)</span></label>
+        <input type="text" id="jockey" autocomplete="off" placeholder="ex: CELESTE CIFONELLI · ou vide">
+        <div class="autocomplete-list" id="jockey-list" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Discipline</label>
+        <select id="discipline">
+          <option value="">— Sélectionner —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Hauteur (cm) — optionnel</label>
+        <select id="distance" disabled>
+          <option value="">— choisis d'abord une discipline —</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-predict" id="btn" onclick="predict()">⬡ Lancer l'analyse ⬡</button>
+    <div class="loader" id="loader">
+      <div class="loader-ring"></div>
+      <div class="loader-text">Analyse en cours...</div>
+    </div>
+    <div class="error-msg" id="err">Veuillez renseigner le cheval, le cavalier et la discipline.</div>
+    <div class="result" id="result">
+      <div class="res-header">
+        <div>
+          <div class="res-duo-name" id="r-duo">—</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px;letter-spacing:1px;" id="r-meta">—</div>
+        </div>
+        <div class="res-badge" id="r-disc">—</div>
+      </div>
+      <div class="res-proba-block">
+        <div class="res-pct" id="r-pct">—</div>
+        <div class="res-bar-area">
+          <div class="res-bar-label">Probabilité de réussite (top 3 ou Pts qualif ≥ 8)</div>
+          <div class="res-bar-bg"><div class="res-bar-fill" id="r-bar"></div></div>
+          <div class="res-verdict" id="r-verdict">—</div>
+          <div class="model-tag" id="r-model">—</div>
+        </div>
+      </div>
+      <div class="res-stats">
+        <div class="res-stat">
+          <div class="res-stat-label">Cheval</div>
+          <div class="res-stat-val" id="r-horse">—</div>
+          <div class="res-stat-sub" id="r-horse-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Cavalier</div>
+          <div class="res-stat-val" id="r-jockey">—</div>
+          <div class="res-stat-sub" id="r-jockey-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Réussites cheval</div>
+          <div class="res-stat-val gold" id="r-wins">—</div>
+          <div class="res-stat-sub" id="r-wins-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Compatibilité duo</div>
+          <div class="res-stat-val gold" id="r-compat">—</div>
+          <div class="compat-pips" id="r-pips"></div>
+        </div>
+        <div class="res-stat" style="grid-column: 1 / -1; border-right: none;">
+          <div class="res-stat-label">Forme récente</div>
+          <div style="font-size:14px;color:var(--text-muted);margin-top:4px;font-family:'Montserrat',sans-serif;font-weight:300;line-height:1.6;" id="r-forme">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="how">
+  <div class="how-inner">
+    <div class="section-tag">Méthode</div>
+    <h2 class="section-title">Comment ça <span>fonctionne</span></h2>
+    <div class="section-line"></div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Saisie du duo</div>
+        <div class="step-text">Entrez le nom du cheval et du cavalier (avec auto-complétion sur la base FFE) ainsi que la discipline.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Reconstruction des features</div>
+        <div class="step-text">Le serveur retrouve l'historique du cheval, du cavalier et du club, et calcule les 19 variables attendues par le modèle.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Modèle LightGBM</div>
+        <div class="step-text">Le modèle gradient boosting entraîné lors du PFE évalue la probabilité de réussite de l'engagement.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">Fiche de résultat</div>
+        <div class="step-text">Probabilité, stats historiques, synergie et forme récente du duo sont restituées en quelques secondes.</div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="features">
+  <div class="features">
+    <div class="section-tag">Fonctionnalités</div>
+    <h2 class="section-title">Tout pour <span>performer</span></h2>
+    <div class="section-line"></div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Auto-complétion FFE</div>
+        <div class="feat-text">Champs cheval / cavalier alimentés en direct par la base FFE collectée via le module ffe_crawler.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Profil cavalier</div>
+        <div class="feat-text">Taux de réussite cumulé, nombre de sorties, expérience par discipline.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Compatibilité duo</div>
+        <div class="feat-text">Score de synergie basé sur l'historique commun cavalier / cheval.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Multi-disciplines</div>
+        <div class="feat-text">CSO, Dressage, CCE, Equifun, Endurance… toutes les familles FFE présentes dans le dataset.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Concours futurs</div>
+        <div class="feat-text">Crawle les concours à venir et prédit la performance de chaque engagement avant même la course.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">◈</div>
+        <div class="feat-title">Local et reproductible</div>
+        <div class="feat-text">Tout tourne en local sur le modèle .joblib du PFE — aucun appel à un service externe.</div>
+      </div>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+<script>
+// ─────────────────────────────────────────────
+// Init : charge stats LIVE (modèle + dataset) + remplit le <select>
+// ─────────────────────────────────────────────
+async function loadDisciplines() {
+  try {
+    const r = await fetch('/api/disciplines');
+    const j = await r.json();
+    const sel = document.getElementById('discipline');
+    j.disciplines.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      sel.appendChild(opt);
+    });
+    // Recharge les hauteurs disponibles quand la discipline change
+    sel.addEventListener('change', () => loadDistances(sel.value));
+  } catch(e) {
+    console.error('Disciplines indisponibles:', e);
+  }
+}
+
+// Hauteurs (cm) disponibles pour la discipline active. Désactive le
+// select si la discipline n'en a pas (Dressage, Attelage, etc.).
+async function loadDistances(discipline) {
+  const sel = document.getElementById('distance');
+  sel.innerHTML = '';
+  if (!discipline) {
+    sel.appendChild(new Option('— choisis d\'abord une discipline —', ''));
+    sel.disabled = true;
+    return;
+  }
+  try {
+    const r = await fetch('/api/distances?discipline=' + encodeURIComponent(discipline));
+    const j = await r.json();
+    const dists = j.distances || [];
+    if (dists.length === 0) {
+      sel.appendChild(new Option('— pas de hauteur pour cette discipline —', ''));
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    sel.appendChild(new Option('(toutes hauteurs)', ''));
+    dists.forEach(d => sel.appendChild(new Option(d + ' cm', String(d))));
+  } catch(e) {
+    sel.appendChild(new Option('Erreur de chargement', ''));
+    sel.disabled = true;
+  }
+}
+
+// Stats live depuis le backend — accuracy du modèle entraîné + cardinalités
+// du dataset adapté. Plus d'estimations hardcodées.
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    if (!r.ok) return;
+    const s = await r.json();
+    const pct = (s.accuracy * 100).toFixed(1) + '%';
+    document.getElementById('stat-pct').textContent       = pct;
+    document.getElementById('stat-duos').textContent      = compact(s.n_duos);
+    document.getElementById('stat-chevaux').textContent   = compact(s.n_chevaux);
+    document.getElementById('stat-cavaliers').textContent = compact(s.n_cavaliers);
+    document.getElementById('stat-disc').textContent      = s.n_disciplines;
+    // Bandeau "Dataset actif"
+    if (s.active_snapshot) {
+      document.getElementById('activeSnapBar').style.display = 'flex';
+      document.getElementById('activeSnapLabel').textContent = s.active_snapshot.label;
+    }
+  } catch(e) {
+    console.error('Stats indisponibles:', e);
+  }
+}
+
+// Compactage des grands nombres : 13274 → "13.3K", 980 → "980"
+function compact(n) {
+  if (n == null) return '—';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+// ─────────────────────────────────────────────
+// Auto-complétion cheval / cavalier
+// ─────────────────────────────────────────────
+function setupAutocomplete(inputId, listId, endpoint) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  let debounceTimer = null;
+
+  const refresh = async () => {
+    const q = input.value.trim();
+    if (q.length < 2) { list.style.display = 'none'; return; }
+    try {
+      const r = await fetch(endpoint + '?q=' + encodeURIComponent(q));
+      const j = await r.json();
+      const items = j.suggestions || [];
+      if (items.length === 0) { list.style.display = 'none'; return; }
+      list.innerHTML = '';
+      items.forEach(name => {
+        const el = document.createElement('div');
+        el.className = 'autocomplete-item';
+        el.textContent = name;
+        el.onmousedown = () => { input.value = name; list.style.display = 'none'; };
+        list.appendChild(el);
+      });
+      list.style.display = 'block';
+    } catch(e) {
+      list.style.display = 'none';
+    }
+  };
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(refresh, 180);
+  });
+  input.addEventListener('blur', () => setTimeout(() => list.style.display = 'none', 150));
+}
+
+// ─────────────────────────────────────────────
+// Lancement de la prédiction — appel au backend Python
+// ─────────────────────────────────────────────
+async function predict() {
+  const horse  = document.getElementById('horse').value.trim();
+  const jockey = document.getElementById('jockey').value.trim();
+  const disc   = document.getElementById('discipline').value;
+  const dist   = document.getElementById('distance').value;
+  const err    = document.getElementById('err');
+  const loader = document.getElementById('loader');
+  const btn    = document.getElementById('btn');
+  const result = document.getElementById('result');
+
+  err.classList.remove('on');
+  result.classList.remove('on');
+
+  if (!horse || !disc) {
+    err.textContent = 'Veuillez renseigner au moins le cheval et la discipline (le cavalier est optionnel).';
+    err.classList.add('on');
+    return;
+  }
+
+  btn.disabled = true;
+  loader.classList.add('on');
+
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      err.textContent = data.error || data.detail || 'Erreur lors de l\'analyse. Réessayer.';
+      err.classList.add('on');
+      return;
+    }
+    render(horse, jockey, disc, dist, data);
+  } catch(e) {
+    err.textContent = 'Le serveur de prédiction est injoignable. Vérifie qu\'uvicorn tourne.';
+    err.classList.add('on');
+  } finally {
+    btn.disabled = false;
+    loader.classList.remove('on');
+  }
+}
+
+function render(horse, jockey, disc, dist, s) {
+  const proba  = Math.round(s.proba);
+  const compat = s.duo_courses > 0 ? Math.round(s.duo_victoires / s.duo_courses * 100) : 0;
+  document.getElementById('r-duo').innerHTML  = horse + ' <span>×</span> ' + jockey;
+  document.getElementById('r-meta').textContent = disc + (dist ? ' — ' + dist + ' cm' : '');
+  document.getElementById('r-disc').textContent = disc;
+  document.getElementById('r-pct').textContent  = proba + '%';
+  document.getElementById('r-model').textContent = 'Modèle : ' + (s.model_name || 'inconnu');
+  document.getElementById('r-horse').textContent = horse;
+  document.getElementById('r-horse-sub').textContent = (s.cheval_race || 'Robe ?') + ' · expérience ' + s.cheval_age + ' sorties';
+  document.getElementById('r-jockey').textContent = jockey;
+  document.getElementById('r-jockey-sub').textContent = s.jockey_victoires + ' réussites / ' + s.jockey_courses + ' sorties';
+  document.getElementById('r-wins').textContent = s.cheval_victoires;
+  document.getElementById('r-wins-sub').textContent = (s.cheval_courses ? Math.round(s.cheval_victoires/s.cheval_courses*100) : 0) + '% de réussite';
+  document.getElementById('r-compat').textContent = compat + '%';
+  document.getElementById('r-forme').textContent = s.forme;
+  const pips = document.getElementById('r-pips');
+  pips.innerHTML = '';
+  const filled = Math.round(compat / 10);
+  for(let i = 0; i < 10; i++) {
+    const d = document.createElement('div');
+    d.className = 'pip' + (i < filled ? ' on' : '');
+    pips.appendChild(d);
+  }
+  const verd = document.getElementById('r-verdict');
+  if (proba >= 60) { verd.textContent = '★ Favori solide'; verd.className = 'res-verdict high'; }
+  else if (proba >= 35) { verd.textContent = '◆ Outsider crédible'; verd.className = 'res-verdict mid'; }
+  else { verd.textContent = '▲ Outsider'; verd.className = 'res-verdict low'; }
+  document.getElementById('result').classList.add('on');
+  setTimeout(() => { document.getElementById('r-bar').style.width = proba + '%'; }, 80);
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') predict();
+});
+
+// Dès qu'un champ change, on masque la fiche résultat précédente. Sinon
+// l'utilisateur croit que sa nouvelle prédiction n'est pas faite alors
+// que c'est juste l'ancien résultat qui reste affiché.
+['horse','jockey','discipline','distance'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const handler = () => {
+    const res = document.getElementById('result');
+    if (res) res.classList.remove('on');
+    const err = document.getElementById('err');
+    if (err) err.classList.remove('on');
+  };
+  el.addEventListener('input',  handler);
+  el.addEventListener('change', handler);
+});
+
+loadDisciplines();
+loadStats();
+setupAutocomplete('horse',  'horse-list',  '/api/suggest/cheval');
+setupAutocomplete('jockey', 'jockey-list', '/api/suggest/cavalier');
+
+// Replay depuis /history : si l'utilisateur a cliqué sur une ligne du
+// tableau historique, on retrouve son duo dans sessionStorage et on
+// lance automatiquement l'analyse. On efface ensuite la clé pour ne
+// pas relancer à chaque refresh.
+(function replayFromHistory() {
+  try {
+    const raw = sessionStorage.getItem('equirank.replay');
+    if (!raw) return;
+    sessionStorage.removeItem('equirank.replay');
+    const d = JSON.parse(raw);
+    if (!d.cheval || !d.cavalier) return;
+    // Attendre que les disciplines soient chargées (loadDisciplines() est async)
+    setTimeout(() => {
+      document.getElementById('horse').value  = d.cheval   || '';
+      document.getElementById('jockey').value = d.cavalier || '';
+      const disc = document.getElementById('discipline');
+      if (d.discipline) {
+        // Ajoute l'option si elle n'existe pas encore (cas d'une discipline
+        // exotique présente dans l'historique mais pas dans le dataset actif).
+        if (!Array.from(disc.options).some(o => o.value === d.discipline)) {
+          disc.appendChild(new Option(d.discipline, d.discipline));
+        }
+        disc.value = d.discipline;
+      }
+      document.getElementById('predictor').scrollIntoView({ behavior: 'smooth' });
+      // Lance l'analyse automatiquement
+      setTimeout(() => predict(), 200);
+    }, 400);
+  } catch(e) { /* sessionStorage indispo */ }
+})();
+</script>
+</body>
+</html>

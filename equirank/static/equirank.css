@@ -1,0 +1,338 @@
+/* ============================================================
+   © 2026 PFE EquiRank Elite — Tous droits réservés.
+   Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+           · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+   Licence : PROPRIETARY — voir fichier LICENSE.
+   ============================================================ */
+
+:root {
+  /* Palette plus vive : saturation +20%, luminosité ajustée pour
+     ressortir sur le noir profond. Mêmes hues, juste plus marquées. */
+  --gold:        #F5C341;
+  --gold-light:  #FFDA66;
+  --gold-dim:    rgba(245,195,65,0.18);
+  --gold-border: rgba(245,195,65,0.42);
+  --cyan:        #3DD9FF;
+  --cyan-dim:    rgba(61,217,255,0.15);
+  --err:         #FF3D3D;
+  --ok:          #38E373;
+
+  /* Fond noir profond — vrai noir, et calques sombres très contrastés */
+  --bg:  #000000;       /* fond absolu — sous tout */
+  --bg2: #0A0D14;       /* cards */
+  --bg3: #131722;       /* inputs / sub-cards */
+
+  --text:       #F5F2E8;
+  /* Anciens textes gris → maintenant blancs (légère atténuation pour
+     conserver une hiérarchie minimale : les meta de table / dates /
+     placeholders restent un cran sous les vraies valeurs). */
+  --text-muted: rgba(245,242,232,0.92);
+  --text-dim:   rgba(245,242,232,0.72);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  scroll-behavior: smooth;
+  /* Fond noir DUR sur <html> aussi : garantit que la fenêtre du
+     navigateur n'expose JAMAIS de blanc derrière le body (cas où le
+     contenu est plus court que la fenêtre, ou pendant le chargement). */
+  background: var(--bg);
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  overflow-x: hidden;
+  min-height: 100vh;
+  /* Footer collant : si le contenu est court (ex. /crawl-future avant
+     d'avoir lancé un crawl), le footer reste en bas de la fenêtre au
+     lieu de remonter au milieu. */
+  display: flex;
+  flex-direction: column;
+}
+body > main  { flex: 1 0 auto; }
+body > footer { flex-shrink: 0; }
+/* Pas de quadrillage : fond noir plein pour faire ressortir les
+   accents dorés et cyan. (Auparavant, body::before posait une grille
+   subtile — retiré pour plus de contraste.) */
+
+/* ── Nav ────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1rem, 5vw, 3rem);
+  height: 64px;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--gold-border);
+}
+.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--text); }
+.nav-logo span { color: var(--gold); }
+.nav-links { display: flex; gap: 1.5rem; list-style: none; }
+.nav-links a {
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted); text-decoration: none; transition: color 0.2s;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--gold); }
+.nav-cta {
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px 20px;
+  border: 1px solid var(--gold);
+  color: var(--gold); background: transparent;
+  cursor: pointer; text-decoration: none;
+  font-family: 'Rajdhani', sans-serif;
+  transition: background 0.2s;
+}
+.nav-cta:hover { background: var(--gold-dim); }
+@media (max-width: 820px) { .nav-links a { font-size: 11px; letter-spacing: 1px; } }
+
+/* ── Layout main + hero ─────────────────────── */
+main { position: relative; z-index: 1; padding: 96px clamp(1rem, 5vw, 4rem) 4rem; max-width: 1100px; margin: 0 auto; }
+
+/* Hero "marketing" — identique à l'index. position:relative + overflow:hidden
+   pour héberger .hero-glow ; padding et animations alignés. */
+.hero-block {
+  position: relative; overflow: hidden;
+  text-align: center;
+  padding: 1.5rem 0 2.5rem;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.8s ease both;
+}
+.hero-glow {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,195,65,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  animation: breathe 6s ease-in-out infinite;
+  z-index: 0;
+}
+@keyframes breathe { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.7} 50%{transform:translate(-50%,-50%) scale(1.1);opacity:1} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+.hero-eyebrow {
+  position: relative; z-index: 1;
+  font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 1rem;
+}
+.hero-title {
+  position: relative; z-index: 1;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 10vw, 92px);
+  letter-spacing: 5px; line-height: 0.95;
+  color: var(--text);
+}
+.hero-title span { color: var(--gold); }
+
+/* ── Card ───────────────────────────────────── */
+.pred-card {
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.pred-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.card-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--gold); margin-bottom: 0.25rem; }
+.card-sub   { font-size: 13px; letter-spacing: 1.5px; color: var(--text-muted); font-family: 'Montserrat', sans-serif; margin-bottom: 1.5rem; }
+
+/* ── Form ───────────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+@media(max-width: 720px) { .form-grid, .form-grid.four { grid-template-columns: 1fr 1fr; } }
+@media(max-width: 480px) { .form-grid, .form-grid.four { grid-template-columns: 1fr; } }
+.field { position: relative; }
+.field label { display: block; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.field input, .field select {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg3);
+  border: 1px solid rgba(245,195,65,0.2);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px; font-weight: 500;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--gold); background: rgba(245,195,65,0.04); }
+.field input::placeholder { color: var(--text-dim); }
+.field select option { background: var(--bg2); }
+
+/* ── Boutons ────────────────────────────────── */
+.btn-predict {
+  width: 100%; padding: 16px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 4px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  margin-top: 8px;
+}
+.btn-predict:hover { background: var(--gold-dim); box-shadow: 0 0 20px rgba(245,195,65,0.15); }
+.btn-predict:active { transform: scale(0.99); }
+.btn-predict:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-block;
+  padding: 12px 24px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: 3px;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-ghost:hover { background: var(--cyan-dim); }
+
+.error-msg { display: none; text-align: center; font-size: 13px; letter-spacing: 1px; color: var(--err); padding: 1rem; }
+.error-msg.on { display: block; }
+
+/* ── Progression / Rail ─────────────────────── */
+.progress-card {
+  display: none;
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin-bottom: 2rem;
+}
+.progress-card.on { display: block; }
+.steps-rail {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--gold-border);
+  margin-bottom: 1.5rem;
+}
+.rail-step {
+  padding: 1rem 0.75rem;
+  border-right: 1px solid var(--gold-border);
+  text-align: center;
+  background: var(--bg3);
+  transition: background 0.3s, color 0.3s;
+}
+.rail-step:last-child { border-right: none; }
+.rail-step .rs-id    { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--gold-border); }
+.rail-step .rs-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+.rail-step.active { background: linear-gradient(135deg, rgba(245,195,65,0.18), var(--bg3)); }
+.rail-step.active .rs-id, .rail-step.active .rs-label { color: var(--gold); }
+.rail-step.done { background: rgba(56,227,115,0.08); }
+.rail-step.done .rs-id, .rail-step.done .rs-label { color: var(--ok); }
+
+.progress-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.pm-item { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--text-muted); }
+.pm-item span { color: var(--gold); margin-right: 0.4em; }
+
+.progress-bar-bg { height: 6px; background: var(--bg3); border: 1px solid rgba(245,195,65,0.15); overflow: hidden; margin-bottom: 1rem; }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-light), var(--gold)); width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+.log-box {
+  background: var(--bg3);
+  border: 1px solid rgba(245,195,65,0.15);
+  padding: 1rem;
+  height: 280px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-box .log-line.success { color: var(--ok); }
+.log-box .log-line.error   { color: var(--err); }
+.log-box .log-line.step    { color: var(--gold); }
+.log-box::-webkit-scrollbar { width: 4px; }
+.log-box::-webkit-scrollbar-thumb { background: var(--gold-border); }
+
+/* ── Résultat ───────────────────────────────── */
+.result-card {
+  display: none;
+  background: linear-gradient(135deg, var(--bg3), rgba(245,195,65,0.06));
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: 2rem;
+}
+.result-card.on { display: block; }
+.result-card.error { background: linear-gradient(135deg, var(--bg3), rgba(255,61,61,0.08)); border-color: rgba(255,61,61,0.5); }
+
+.res-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--gold-border); margin: 1.5rem 0; }
+.res-metric { padding: 1.25rem; border-right: 1px solid var(--gold-border); }
+.res-metric:last-child { border-right: none; }
+.res-metric-label { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.res-metric-val   { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--gold); }
+
+/* ── Liste de concours / table participants ── */
+.concours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.concours-card {
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  padding: 1.25rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, transform 0.15s;
+  display: block;
+}
+.concours-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.concours-card .num { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--gold); }
+.concours-card .disc { font-size: 13px; color: var(--text-muted); margin-top: 0.4rem; letter-spacing: 1px; }
+.concours-card .stats { display: flex; gap: 1.25rem; margin-top: 0.8rem; font-size: 13px; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
+.concours-card .stats strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; margin-right: 4px; }
+
+.parts-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 14px; }
+.parts-table thead th {
+  background: var(--bg3);
+  color: var(--text-muted);
+  font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--gold-border);
+}
+.parts-table tbody tr { border-bottom: 1px solid rgba(245,195,65,0.1); transition: background 0.15s; }
+.parts-table tbody tr:hover { background: rgba(245,195,65,0.04); }
+.parts-table td { padding: 10px; color: var(--text); }
+.parts-table td.cheval, .parts-table td.cavalier { font-weight: 600; }
+.parts-table td.rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; letter-spacing: 1px; text-align: center;
+  color: var(--text-muted); width: 70px;
+}
+.parts-table td.rank.r1, .parts-table td.rank.r2, .parts-table td.rank.r3 {
+  font-size: 22px;
+}
+.parts-table td.rank.r1 { color: var(--gold); }              /* or */
+.parts-table td.rank.r2 { color: #C7C7C7; }                  /* argent */
+.parts-table td.rank.r3 { color: #CD8A4F; }                  /* bronze */
+.parts-table td.proba { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 1px; text-align: center; }
+.parts-table td.proba.favori    { color: var(--ok); }
+.parts-table td.proba.outsiderp { color: var(--gold); }
+.parts-table td.proba.outsider  { color: var(--err); }
+.parts-table td.proba.inconnu   { color: var(--text-muted); }
+.parts-table td.proba.coldstart { color: var(--cyan); }
+.parts-table td.proba.coldstart::after { content: ' *'; font-size: 14px; color: var(--cyan); }
+
+.empty-msg { padding: 2rem; text-align: center; color: var(--text-muted); font-style: italic; }
+
+/* ── Footer ─────────────────────────────────── */
+footer {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--gold-border);
+  padding: 2rem clamp(1rem, 5vw, 4rem);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  background: var(--bg2);
+}
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; color: var(--text); }
+.footer-logo span { color: var(--gold); }
+.footer-copy { font-size: 13px; letter-spacing: 1px; color: var(--text-muted); font-family: 'Montserrat', sans-serif; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold-border); }
