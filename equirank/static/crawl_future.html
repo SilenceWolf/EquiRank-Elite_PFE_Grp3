@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Crawler Predict</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<script src="/static/state.js"></script>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict" class="active">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <a href="/predictions" class="nav-cta">Voir prédictions →</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Concours à venir — pas encore disputés</div>
+    <h1 class="hero-title">Crawler <span>Predict</span></h1>
+  </div>
+
+  <!-- ── Paramètres du crawl predict — tout dans une seule card ── -->
+  <div class="pred-card" id="formCard">
+    <div class="card-title">Paramètres du crawl predict</div>
+    <div class="card-sub">
+      Filtres FFE cascadés + dates strictement futures. Login FFE
+      <strong>fortement recommandé</strong> — sans auth, FFE masque les
+      noms par "Voir sa fiche" et toutes les prédictions deviennent des
+      estimations cold-start peu utiles.
+    </div>
+
+    <div class="form-grid">
+      <div class="field"><label>📅 Date de début</label><input type="date" id="deb"></div>
+      <div class="field"><label>📅 Date de fin</label><input type="date" id="fin"></div>
+    </div>
+
+    <div class="form-grid four">
+      <div class="field">
+        <label>Région</label>
+        <select id="filRegion"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>Département</label>
+        <select id="filDepartement"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>🏇 Discipline</label>
+        <select id="discipline"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>Championnat</label>
+        <select id="filChampionnat"><option>—</option></select>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>🔐 Identifiant FFE (fortement recommandé)</label>
+        <input type="text" id="username" autocomplete="username" placeholder="sans → noms masqués 'Voir sa fiche'">
+      </div>
+      <div class="field">
+        <label>🔒 Mot de passe FFE</label>
+        <input type="password" id="password" autocomplete="current-password">
+      </div>
+    </div>
+
+    <button class="btn-predict" id="btnStart" onclick="startFuture()">⬡ Lancer le crawl predict ⬡</button>
+    <div class="error-msg" id="formError"></div>
+  </div>
+
+  <!-- ── Progression ── -->
+  <div class="progress-card" id="progressCard">
+    <div class="card-title">Progression</div>
+    <div class="card-sub" id="progressSub">Crawl en cours…</div>
+
+    <div class="steps-rail" id="stepsRail">
+      <div class="rail-step" data-step="s1"><div class="rs-id">s1</div><div class="rs-label">Calendrier</div></div>
+      <div class="rail-step" data-step="s2"><div class="rs-id">s2</div><div class="rs-label">Concours</div></div>
+      <div class="rail-step" data-step="s3"><div class="rs-id">s3</div><div class="rs-label">Épreuves</div></div>
+      <div class="rail-step" data-step="s4"><div class="rs-id">s4</div><div class="rs-label">Engagements</div></div>
+      <div class="rail-step" data-step="predict"><div class="rs-id">⚡</div><div class="rs-label">Prédictions</div></div>
+    </div>
+
+    <div class="progress-meta">
+      <div class="pm-item"><span>STEP</span><span id="pmStep">—</span></div>
+      <div class="pm-item"><span>URL</span><span id="pmUrl">0 / 0</span></div>
+      <div class="pm-item"><span>LIGNES</span><span id="pmRows">0</span></div>
+      <div class="pm-item"><span>JOB</span><span id="pmJob">—</span></div>
+    </div>
+
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- ── Résultat ── -->
+  <div class="result-card" id="resultCard">
+    <div class="card-title" id="resultTitle">Crawl + prédictions terminés</div>
+    <div class="card-sub" id="resultSub">Les prédictions sont disponibles sur la page Prédictions, et enregistrées automatiquement dans l'historique.</div>
+
+    <div class="res-metrics" id="resMetrics"></div>
+
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem;">
+      <a class="btn-ghost" id="btnDownload" href="#" download>⬇ Télécharger CSV (avec prédictions)</a>
+      <a class="btn-ghost" href="/predictions">📋 Voir la liste des concours →</a>
+      <a class="btn-ghost" href="/">🐎 Prédiction unique</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+let currentEntryUrl = '';
+let defaultEntryUrl = '';
+let currentJob = null;
+let pollTimer = null;
+let lastCursor = 0;
+
+const ST_KEY = 'futureJob';            // sessionStorage key pour le job en cours
+
+// ─────────────────────────────────────────────
+// Init (la discipline vient des dropdowns FFE — voir loadFilters)
+// ─────────────────────────────────────────────
+function setDefaultDates() {
+  const today = new Date();
+  const tomorrow = new Date(today.getTime() + 24*60*60*1000);
+  const plus3m = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
+  const todayIso    = today.toISOString().slice(0,10);
+  const tomorrowIso = tomorrow.toISOString().slice(0,10);
+  const debEl = document.getElementById('deb');
+  const finEl = document.getElementById('fin');
+  debEl.value = tomorrowIso;
+  finEl.value = plus3m.toISOString().slice(0,10);
+  // Dates strictement futures côté UI (le backend re-vérifie)
+  debEl.min = tomorrowIso;
+  finEl.min = tomorrowIso;
+  // Pas de borne max — l'utilisateur peut viser un an plus tard si Telemat
+  // a déjà ouvert les engagements.
+}
+
+async function loadFilters(url) {
+  try {
+    const r = await fetch('/api/crawl/filters' + (url ? ('?url=' + encodeURIComponent(url)) : ''));
+    if (!r.ok) {
+      showFiltersWarning('FFE injoignable — filtres indisponibles. Tu peux quand même lancer un crawl global.');
+      return;
+    }
+    const j = await r.json();
+    if (!defaultEntryUrl) defaultEntryUrl = j.default_url;
+    currentEntryUrl = j.source_url || j.default_url;
+    fillSelect('filRegion',      j.filters.region.options,      currentEntryUrl);
+    fillSelect('filDepartement', j.filters.departement.options, currentEntryUrl);
+    fillSelect('discipline',     j.filters.discipline.options,  currentEntryUrl);
+    fillSelect('filChampionnat', j.filters.championnat.options, currentEntryUrl);
+    if (j.degraded) {
+      showFiltersWarning('⚠ FFE Telemat injoignable — seules les disciplines de secours sont affichées. Tu peux quand même lancer un crawl global.');
+    } else {
+      hideFiltersWarning();
+    }
+  } catch(e) {
+    console.error(e);
+    showFiltersWarning('Erreur de chargement des filtres — réessaie dans quelques secondes.');
+  }
+}
+
+function showFiltersWarning(text) {
+  let el = document.getElementById('filtersWarn');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'filtersWarn';
+    el.style.cssText = 'margin-bottom:1rem;padding:0.6rem 1rem;background:rgba(255,61,61,0.08);border:1px solid var(--err);color:var(--err);font-size:13px;letter-spacing:0.5px;';
+    const card = document.getElementById('formCard');
+    if (card) card.insertBefore(el, card.firstChild.nextSibling);
+  }
+  el.textContent = text;
+  el.style.display = 'block';
+}
+function hideFiltersWarning() {
+  const el = document.getElementById('filtersWarn');
+  if (el) el.style.display = 'none';
+}
+
+function fillSelect(id, options, currentUrl) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  if (!options || options.length === 0) { sel.appendChild(new Option('—','')); sel.disabled = true; return; }
+  sel.disabled = false;
+  options.forEach(o => {
+    const opt = new Option(o.label, o.url);
+    if (o.url === currentUrl) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => { if (sel.value) loadFilters(sel.value); };
+}
+
+// ─────────────────────────────────────────────
+// Démarrage du crawl predict
+// ─────────────────────────────────────────────
+async function startFuture() {
+  const deb        = document.getElementById('deb').value;
+  const fin        = document.getElementById('fin').value;
+  const discSel    = document.getElementById('discipline');
+  const discipline = discSel.options[discSel.selectedIndex]?.text || 'Toutes disciplines';
+  const username   = document.getElementById('username').value.trim();
+  const password   = document.getElementById('password').value;
+
+  const errEl = document.getElementById('formError');
+  errEl.classList.remove('on');
+
+  if (!deb || !fin) { errEl.textContent = 'Renseigne les dates.'; errEl.classList.add('on'); return; }
+  if (deb > fin)    { errEl.textContent = 'Date de début > date de fin.'; errEl.classList.add('on'); return; }
+
+  const today = new Date().toISOString().slice(0,10);
+  if (deb <= today) { errEl.textContent = 'La date de début doit être strictement future (utiliser /crawl pour les concours passés).'; errEl.classList.add('on'); return; }
+
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('progressCard').classList.add('on');
+  document.getElementById('resultCard').classList.remove('on', 'error');
+  resetProgressUi();
+
+  try {
+    const r = await fetch('/api/future/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deb, fin, discipline, username, password, entry_url: currentEntryUrl || '' }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      errEl.textContent = j.detail || 'Impossible de lancer le crawl.';
+      errEl.classList.add('on');
+      document.getElementById('btnStart').disabled = false;
+      return;
+    }
+    currentJob = j.job_id;
+    document.getElementById('pmJob').textContent = currentJob.slice(0, 8);
+    appendLog(`▶ Job futur ${currentJob.slice(0,8)} démarré`, 'step');
+    EquirankState.set(ST_KEY, currentJob);
+    pollStatus();
+  } catch(e) {
+    errEl.textContent = 'Serveur injoignable.';
+    errEl.classList.add('on');
+    document.getElementById('btnStart').disabled = false;
+  }
+}
+
+function resetProgressUi() {
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('pmStep').textContent = '—';
+  document.getElementById('pmUrl').textContent  = '0 / 0';
+  document.getElementById('pmRows').textContent = '0';
+  document.querySelectorAll('.rail-step').forEach(el => el.classList.remove('active', 'done'));
+}
+
+// ─────────────────────────────────────────────
+// Polling
+// ─────────────────────────────────────────────
+async function pollStatus() {
+  if (!currentJob) return;
+  try {
+    const r = await fetch(`/api/future/status/${currentJob}?cursor=${lastCursor}`);
+    // 404 = job inconnu côté serveur (uvicorn a redémarré). Stop + clear.
+    if (r.status === 404) {
+      appendLog('⚠ Job introuvable côté serveur (redémarrage ?) — polling arrêté.', 'error');
+      EquirankState.clear(ST_KEY);
+      currentJob = null;
+      document.getElementById('btnStart').disabled = false;
+      return;
+    }
+    const j = await r.json();
+    // Garde-fou cursor : ignore les valeurs non-numériques pour éviter
+    // `cursor=undefined` à la prochaine requête (→ 422).
+    if (typeof j.cursor === 'number') lastCursor = j.cursor;
+    (j.events || []).forEach(applyEvent);
+    if (j.state === 'done')  { finishCrawl(j); return; }
+    if (j.state === 'error') { failCrawl(j);   return; }
+  } catch(e) { appendLog('⚠ erreur polling', 'error'); }
+  pollTimer = setTimeout(pollStatus, 1500);
+}
+
+function applyEvent(evt) {
+  const kind = evt.type || '';
+  if (kind === 'entry_url') {
+    const u = evt.url || '';
+    appendLog(`🌐 URL d'entrée FFE : ${u.length > 90 ? u.slice(0, 90) + '…' : u}`, 'step');
+    appendLog(`   filtres → discipline=${evt.discipline} · ${evt.deb} → ${evt.fin}`);
+    return;
+  }
+  if (kind === 'auth_status') {
+    appendLog(evt.message || (evt.ok ? '✓ Auth OK' : '✗ Auth KO'), evt.ok ? 'success' : 'error');
+    return;
+  }
+  if (kind === 'step_started') {
+    setRailStep(evt.step_id, 'active');
+    document.getElementById('pmStep').textContent = evt.step_id;
+    document.getElementById('pmUrl').textContent = '0 / ' + (evt.entry_urls?.length ?? '?');
+    appendLog(`▶ Step ${evt.step_id} démarré — ${evt.entry_urls?.length ?? 0} URL(s)`, 'step');
+  }
+  else if (kind === 'step_progress') {
+    document.getElementById('pmUrl').textContent = `${evt.index} / ${evt.total}`;
+    advanceBar(evt);
+    if (evt.index % 25 === 0) appendLog(`  ${evt.step_id} — ${evt.index}/${evt.total}`);
+  }
+  else if (kind === 'step_finished') {
+    setRailStep(evt.step_id, 'done');
+    appendLog(`✔ Step ${evt.step_id} terminé — ${evt.row_count} rows`, 'success');
+  }
+  else if (kind === 'ffe_done') {
+    appendLog(`✅ Crawl terminé — ${evt.rows} engagements collectés`, 'success');
+  }
+  else if (kind === 'predicting') {
+    setRailStep('predict', 'active');
+    document.getElementById('pmStep').textContent = 'predict';
+    appendLog(`⚡ ${evt.message}`, 'step');
+  }
+  else if (kind === 'predictions_done') {
+    setRailStep('predict', 'done');
+    appendLog(`✅ ${evt.count} prédictions pour ${evt.concours} concours`, 'success');
+  }
+  else if (kind === 'history_saved') {
+    if (evt.error) {
+      appendLog(`⚠ Auto-save historique : ${evt.error}`, 'error');
+    } else if (evt.n_rows) {
+      appendLog(`💾 Auto-enregistré dans l'historique : ${evt.filename} (${evt.n_rows} lignes)`, 'success');
+    }
+  }
+  else if (kind === 'error') {
+    appendLog(`✗ Erreur : ${evt.message || ''}`, 'error');
+  }
+}
+
+function setRailStep(id, cls) {
+  const el = document.querySelector(`.rail-step[data-step="${id}"]`);
+  if (!el) return;
+  if (cls === 'active') el.classList.add('active');
+  else if (cls === 'done') { el.classList.remove('active'); el.classList.add('done'); }
+}
+
+function advanceBar(evt) {
+  // s1..s4 + predict = 5 segments
+  const order = ['s1','s2','s3','s4','predict'];
+  const idx = order.indexOf(evt.step_id);
+  if (idx < 0 || !evt.total) return;
+  const within = evt.index / evt.total;
+  document.getElementById('progressBar').style.width = Math.min(100, ((idx + within) / order.length) * 100) + '%';
+}
+
+function appendLog(text, cls) {
+  const box = document.getElementById('logBox');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + (cls || '');
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function finishCrawl(j) {
+  EquirankState.clear(ST_KEY);
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('progressBar').style.width = '100%';
+  const card = document.getElementById('resultCard');
+  card.classList.remove('error');
+  card.classList.add('on');
+  document.getElementById('resultTitle').textContent = 'Crawl + prédictions terminés ✓';
+  document.getElementById('resultSub').textContent =
+    `Job ${j.job_id.slice(0,8)} — ${j.rows} engagements répartis sur ${j.concours} concours.`;
+
+  const metrics = document.getElementById('resMetrics');
+  metrics.innerHTML = '';
+  const cells = [
+    { label: 'Engagements', val: j.rows },
+    { label: 'Concours',    val: j.concours },
+    { label: 'URLs visitées', val: j.total_urls },
+    { label: 'Job',         val: j.job_id.slice(0, 8) },
+  ];
+  cells.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'res-metric';
+    el.innerHTML = `<div class="res-metric-label">${c.label}</div><div class="res-metric-val">${c.val}</div>`;
+    metrics.appendChild(el);
+  });
+  document.getElementById('btnDownload').href = `/api/future/download/${j.job_id}`;
+}
+
+function failCrawl(j) {
+  EquirankState.clear(ST_KEY);
+  document.getElementById('btnStart').disabled = false;
+  const card = document.getElementById('resultCard');
+  card.classList.add('on', 'error');
+  document.getElementById('resultTitle').textContent = 'Crawl en échec';
+  document.getElementById('resultSub').textContent = j.error || 'Erreur inconnue.';
+}
+
+setDefaultDates();
+loadFilters();
+
+// ─────────────────────────────────────────────
+// Persistance : restaure le formulaire + auto-resume du job
+// (le state survit aux changements de page via sessionStorage)
+// ─────────────────────────────────────────────
+['deb','fin','username','filRegion','filDepartement','filChampionnat']
+  .forEach(id => EquirankState.bindField(id, 'cf.' + id));
+// `discipline` est rempli dynamiquement par loadFilters → bind après
+setTimeout(() => EquirankState.bindField('discipline', 'cf.discipline'), 500);
+
+const savedJob = EquirankState.get(ST_KEY, null);
+if (savedJob) {
+  currentJob = savedJob;
+  document.getElementById('progressCard').classList.add('on');
+  document.getElementById('pmJob').textContent = savedJob.slice(0, 8);
+  appendLog(`↩ Reprise du job ${savedJob.slice(0,8)} (changé de page)`, 'step');
+  pollStatus();
+}
+</script>
+</body>
+</html>

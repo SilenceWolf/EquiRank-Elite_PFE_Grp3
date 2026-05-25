@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Crawler FFE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #F5C341;
+  --gold-light: #FFDA66;
+  --gold-dim: rgba(245,195,65,0.18);
+  --gold-border: rgba(245,195,65,0.42);
+  --cyan: #3DD9FF;
+  --cyan-dim: rgba(61,217,255,0.15);
+  --bg: #000000;
+  --bg2: #0A0D14;
+  --bg3: #131722;
+  --text: #F5F2E8;
+  --text-muted: rgba(245,242,232,0.92);
+  --text-dim: rgba(245,242,232,0.72);
+  --err: #FF3D3D;
+  --ok:  #38E373;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  scroll-behavior: smooth;
+  /* Fond noir DUR sur <html> aussi pour éviter tout flash blanc
+     pendant le chargement ou quand la fenêtre est plus grande que le body. */
+  background: var(--bg);
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  overflow-x: hidden;
+  min-height: 100vh;
+  /* Footer collant — même comportement que les autres pages : si le
+     contenu est court (ex. avant le lancement d'un crawl), le footer
+     reste en bas du viewport au lieu de remonter au milieu. */
+  display: flex;
+  flex-direction: column;
+}
+body > main  { flex: 1 0 auto; }
+body > footer { flex-shrink: 0; }
+/* Fond noir plein — pas de quadrillage, pour laisser ressortir
+   les accents dorés et cyan. */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1rem, 5vw, 3rem);
+  height: 64px;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--gold-border);
+}
+.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: var(--text); }
+.nav-logo span { color: var(--gold); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover, .nav-links a.active { color: var(--gold); }
+.nav-cta { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 20px; border: 1px solid var(--gold); color: var(--gold); background: transparent; cursor: pointer; font-family: 'Rajdhani', sans-serif; text-decoration: none; transition: background 0.2s; }
+.nav-cta:hover { background: var(--gold-dim); }
+
+main { position: relative; z-index: 1; padding: 96px clamp(1rem, 5vw, 4rem) 4rem; max-width: 1100px; margin: 0 auto; }
+.hero-block { text-align: center; margin-bottom: 2.5rem; }
+.hero-eyebrow { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--cyan); margin-bottom: 1rem; }
+.hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(40px, 8vw, 72px); letter-spacing: 4px; line-height: 1; color: var(--text); }
+.hero-title span { color: var(--gold); }
+
+.pred-card {
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+.pred-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 3px;
+  color: var(--gold); margin-bottom: 0.25rem;
+}
+.card-sub {
+  font-size: 13px; letter-spacing: 1.5px; color: var(--text-muted);
+  font-family: 'Montserrat', sans-serif; margin-bottom: 1.5rem;
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+@media(max-width: 720px) {
+  .form-grid, .form-grid.four { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width: 480px) {
+  .form-grid, .form-grid.four { grid-template-columns: 1fr; }
+}
+
+.field { position: relative; }
+.field label { display: block; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.field input, .field select {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg3);
+  border: 1px solid rgba(245,195,65,0.2);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px; font-weight: 500;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--gold);
+  background: rgba(245,195,65,0.04);
+}
+.field input::placeholder { color: var(--text-dim); }
+.field select option { background: var(--bg2); }
+
+.btn-predict {
+  width: 100%; padding: 16px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 4px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  margin-top: 8px;
+}
+.btn-predict:hover { background: var(--gold-dim); box-shadow: 0 0 20px rgba(245,195,65,0.15); }
+.btn-predict:active { transform: scale(0.99); }
+.btn-predict:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-block;
+  padding: 12px 24px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: 3px;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-ghost:hover { background: var(--cyan-dim); }
+
+.error-msg { display: none; text-align: center; font-size: 13px; letter-spacing: 1px; color: var(--err); padding: 1rem; }
+.error-msg.on { display: block; }
+
+/* ─── Panneau progression / logs ─── */
+.progress-card {
+  display: none;
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  margin-bottom: 2rem;
+}
+.progress-card.on { display: block; }
+
+.steps-rail {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border: 1px solid var(--gold-border);
+  margin-bottom: 1.5rem;
+}
+.rail-step {
+  padding: 1rem 0.75rem;
+  border-right: 1px solid var(--gold-border);
+  text-align: center;
+  background: var(--bg3);
+  transition: background 0.3s, color 0.3s;
+}
+.rail-step:last-child { border-right: none; }
+.rail-step .rs-id {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px;
+  color: var(--gold-border);
+}
+.rail-step .rs-label {
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted); margin-top: 4px;
+}
+.rail-step.active { background: linear-gradient(135deg, rgba(245,195,65,0.18), var(--bg3)); }
+.rail-step.active .rs-id, .rail-step.active .rs-label { color: var(--gold); }
+.rail-step.done { background: rgba(56,227,115,0.08); }
+.rail-step.done .rs-id, .rail-step.done .rs-label { color: var(--ok); }
+
+.progress-meta {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  margin-bottom: 1rem;
+}
+.pm-item { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--text-muted); }
+.pm-item span { color: var(--gold); margin-right: 0.4em; }
+
+.progress-bar-bg {
+  height: 6px; background: var(--bg3);
+  border: 1px solid rgba(245,195,65,0.15);
+  overflow: hidden; margin-bottom: 1rem;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-light), var(--gold));
+  width: 0%;
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.log-box {
+  background: var(--bg3);
+  border: 1px solid rgba(245,195,65,0.15);
+  padding: 1rem;
+  height: 280px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-box .log-line.success { color: var(--ok); }
+.log-box .log-line.error   { color: var(--err); }
+.log-box .log-line.step    { color: var(--gold); }
+.log-box::-webkit-scrollbar { width: 4px; }
+.log-box::-webkit-scrollbar-thumb { background: var(--gold-border); }
+
+/* ─── Résultat final ─── */
+.result-card {
+  display: none;
+  background: linear-gradient(135deg, var(--bg3), rgba(245,195,65,0.06));
+  border: 1px solid var(--gold-border);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: 2rem;
+}
+.result-card.on { display: block; }
+.result-card.error { background: linear-gradient(135deg, var(--bg3), rgba(255,61,61,0.08)); border-color: rgba(255,61,61,0.5); }
+
+.res-metrics {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0; margin: 1.5rem 0;
+  border: 1px solid var(--gold-border);
+}
+.res-metric { padding: 1.25rem; border-right: 1px solid var(--gold-border); }
+.res-metric:last-child { border-right: none; }
+.res-metric-label { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.res-metric-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; color: var(--gold); }
+
+footer {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--gold-border);
+  padding: 2rem clamp(1rem, 5vw, 4rem);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  background: var(--bg2);
+}
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 3px; color: var(--text); }
+.footer-logo span { color: var(--gold); }
+.footer-copy { font-size: 13px; letter-spacing: 1px; color: var(--text-muted); font-family: 'Montserrat', sans-serif; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold-border); }
+</style>
+<script src="/static/state.js"></script>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl" class="active">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <a href="/datasets" class="nav-cta">📦 Datasets</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Collecte des données FFE — PFE</div>
+    <h1 class="hero-title">Crawler <span>FFE</span></h1>
+  </div>
+
+  <!-- ── Paramètres du crawl — tout dans une seule card ── -->
+  <div class="pred-card" id="formCard">
+    <div class="card-title">Paramètres du crawl</div>
+    <div class="card-sub">Filtres FFE cascadés, dates, et identifiants (uniquement pour la fiche équidé s5).</div>
+
+    <div class="form-grid">
+      <div class="field"><label>📅 Date de début</label><input type="date" id="deb"></div>
+      <div class="field"><label>📅 Date de fin</label><input type="date" id="fin"></div>
+    </div>
+
+    <div class="form-grid four">
+      <div class="field">
+        <label>Région</label>
+        <select id="filRegion"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>Département</label>
+        <select id="filDepartement"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>🏇 Discipline</label>
+        <select id="discipline"><option>—</option></select>
+      </div>
+      <div class="field">
+        <label>Championnat</label>
+        <select id="filChampionnat"><option>—</option></select>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>🔐 Identifiant FFE (optionnel)</label>
+        <input type="text" id="username" autocomplete="username" placeholder="laisser vide pour skip s5">
+      </div>
+      <div class="field">
+        <label>🔒 Mot de passe FFE</label>
+        <input type="password" id="password" autocomplete="current-password">
+      </div>
+    </div>
+
+    <button class="btn-predict" id="btnStart" onclick="startCrawl()">⬡ Lancer le crawl ⬡</button>
+    <div class="error-msg" id="formError"></div>
+  </div>
+
+  <!-- ── Progression live ── -->
+  <div class="progress-card" id="progressCard">
+    <div class="card-title">Progression</div>
+    <div class="card-sub" id="progressSub">Crawl en cours…</div>
+
+    <div class="steps-rail" id="stepsRail">
+      <div class="rail-step" data-step="s1"><div class="rs-id">s1</div><div class="rs-label">Calendrier</div></div>
+      <div class="rail-step" data-step="s2"><div class="rs-id">s2</div><div class="rs-label">Concours</div></div>
+      <div class="rail-step" data-step="s3"><div class="rs-id">s3</div><div class="rs-label">Épreuves</div></div>
+      <div class="rail-step" data-step="s4"><div class="rs-id">s4</div><div class="rs-label">Engagements</div></div>
+      <div class="rail-step" data-step="s5"><div class="rs-id">s5</div><div class="rs-label">Fiche équidé</div></div>
+    </div>
+
+    <div class="progress-meta">
+      <div class="pm-item"><span>STEP</span><span id="pmStep">—</span></div>
+      <div class="pm-item"><span>URL</span><span id="pmUrl">0 / 0</span></div>
+      <div class="pm-item"><span>LIGNES</span><span id="pmRows">0</span></div>
+      <div class="pm-item"><span>JOB</span><span id="pmJob">—</span></div>
+    </div>
+
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- ── Résultat ── -->
+  <div class="result-card" id="resultCard">
+    <div class="card-title" id="resultTitle">Crawl terminé</div>
+    <div class="card-sub" id="resultSub">Le dataset est prêt — télécharge ou enchaîne directement l'adaptation et le ré-entraînement.</div>
+
+    <div class="res-metrics" id="resMetrics"></div>
+
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem;">
+      <a class="btn-ghost" id="btnDownload" href="#" download>⬇ Télécharger CSV</a>
+      <button class="btn-ghost" id="btnTrain" onclick="startTraining()">⚡ Adapter + ré-entraîner le modèle</button>
+      <button class="btn-ghost" onclick="restoreDefault()" title="Restaurer le dataset / modèle d'origine (l'état au 1er démarrage)">🛡️ Restaurer le défaut</button>
+      <a class="btn-ghost" href="/datasets">📦 Gérer les datasets</a>
+      <a class="btn-ghost" href="/">🐎 Aller à la prédiction</a>
+    </div>
+    <div class="error-msg" id="resultMsg" style="text-align:left"></div>
+  </div>
+
+  <!-- ── Pipeline post-crawl (adapt + train) ── -->
+  <div class="progress-card" id="trainCard">
+    <div class="card-title">Pipeline d'apprentissage</div>
+    <div class="card-sub" id="trainSub">Écriture dataset → adapt_dataset_v2 → train.py → reload du predictor.</div>
+    <div class="log-box" id="trainLog" style="height: 320px;"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// État global UI
+// ─────────────────────────────────────────────
+let currentEntryUrl = '';     // URL résultante des filtres
+let defaultEntryUrl = '';     // URL par défaut (Toutes régions/dept/disc)
+let currentJob = null;
+let currentPipeline = null;
+let pollTimer = null;
+let trainTimer = null;
+let lastCursor = 0;
+
+const ST_KEY = 'crawlJob';    // sessionStorage : job en cours sur /crawl
+
+// ─────────────────────────────────────────────
+// Init : dates + filtres FFE (la discipline vient des dropdowns FFE)
+// ─────────────────────────────────────────────
+function setDefaultDates() {
+  const today    = new Date();
+  const todayIso = today.toISOString().slice(0,10);
+  const start    = new Date(today.getFullYear(), 0, 1);
+  const debEl = document.getElementById('deb');
+  const finEl = document.getElementById('fin');
+  debEl.value = start.toISOString().slice(0,10);
+  finEl.value = todayIso;
+  // Ce crawler sert à entraîner — il n'accepte que des concours
+  // déjà disputés (avec résultats). Pour les dates futures, voir /crawl-predict.
+  debEl.max = todayIso;
+  finEl.max = todayIso;
+}
+
+// Charge les 4 dropdowns FFE (région/département/discipline/championnat).
+// Appelé au boot puis chaque fois que l'utilisateur change un filtre.
+async function loadFilters(url) {
+  try {
+    const r = await fetch('/api/crawl/filters' + (url ? ('?url=' + encodeURIComponent(url)) : ''));
+    if (!r.ok) {
+      console.warn('filters indisponibles', await r.text());
+      showFiltersWarning('FFE injoignable — filtres indisponibles. Tu peux quand même lancer un crawl global.');
+      return;
+    }
+    const j = await r.json();
+    if (!defaultEntryUrl) defaultEntryUrl = j.default_url;
+    currentEntryUrl = j.source_url || j.default_url;
+
+    fillSelect('filRegion',      j.filters.region.options,      currentEntryUrl);
+    fillSelect('filDepartement', j.filters.departement.options, currentEntryUrl);
+    fillSelect('discipline',     j.filters.discipline.options,  currentEntryUrl);
+    fillSelect('filChampionnat', j.filters.championnat.options, currentEntryUrl);
+
+    // Affiche un avertissement si on est en mode dégradé (FFE a refusé
+    // de servir la page ou structure inattendue) — l'utilisateur ne
+    // voit que les disciplines hardcodées dans ce cas.
+    if (j.degraded) {
+      showFiltersWarning('⚠ FFE Telemat injoignable — seules les disciplines de secours sont affichées. Tu peux quand même lancer un crawl global.');
+    } else {
+      hideFiltersWarning();
+    }
+  } catch(e) {
+    console.error('loadFilters failed', e);
+    showFiltersWarning('Erreur de chargement des filtres — réessaie dans quelques secondes.');
+  }
+}
+
+function showFiltersWarning(text) {
+  let el = document.getElementById('filtersWarn');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'filtersWarn';
+    el.style.cssText = 'margin-bottom:1rem;padding:0.6rem 1rem;background:rgba(255,61,61,0.08);border:1px solid var(--err);color:var(--err);font-size:13px;letter-spacing:0.5px;';
+    const card = document.getElementById('formCard');
+    if (card) card.insertBefore(el, card.firstChild.nextSibling);
+  }
+  el.textContent = text;
+  el.style.display = 'block';
+}
+function hideFiltersWarning() {
+  const el = document.getElementById('filtersWarn');
+  if (el) el.style.display = 'none';
+}
+
+function fillSelect(id, options, currentUrl) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  if (!options || options.length === 0) {
+    sel.appendChild(new Option('—', ''));
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  options.forEach(opt => {
+    const o = new Option(opt.label, opt.url);
+    if (opt.url === currentUrl) o.selected = true;
+    sel.appendChild(o);
+  });
+  // Le onchange recharge les filtres pour la nouvelle URL — cascade Telemat
+  sel.onchange = () => {
+    const newUrl = sel.value;
+    if (newUrl) loadFilters(newUrl);
+  };
+}
+
+// ─────────────────────────────────────────────
+// Démarrage du crawl
+// ─────────────────────────────────────────────
+async function startCrawl() {
+  const deb        = document.getElementById('deb').value;
+  const fin        = document.getElementById('fin').value;
+  // `discipline` est désormais le label visible du dropdown FFE
+  // (ex. "Toutes disciplines", "CSO", ...). On l'envoie tel quel
+  // pour qu'il alimente `field_values.toutes_disciplines`.
+  const discSel    = document.getElementById('discipline');
+  const discipline = discSel.options[discSel.selectedIndex]?.text || 'Toutes disciplines';
+  const username   = document.getElementById('username').value.trim();
+  const password   = document.getElementById('password').value;
+
+  const errEl = document.getElementById('formError');
+  errEl.classList.remove('on');
+
+  if (!deb || !fin) { errEl.textContent = 'Renseigne les dates.'; errEl.classList.add('on'); return; }
+  if (deb > fin)    { errEl.textContent = 'Date de début > date de fin.'; errEl.classList.add('on'); return; }
+
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('progressCard').classList.add('on');
+  document.getElementById('resultCard').classList.remove('on', 'error');
+  document.getElementById('trainCard').classList.remove('on');
+  resetProgressUi();
+
+  try {
+    const r = await fetch('/api/crawl/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deb, fin, discipline, username, password,
+        entry_url: currentEntryUrl || '',
+      }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      errEl.textContent = j.detail || 'Impossible de lancer le crawl.';
+      errEl.classList.add('on');
+      document.getElementById('btnStart').disabled = false;
+      return;
+    }
+    currentJob = j.job_id;
+    document.getElementById('pmJob').textContent = currentJob.slice(0, 8);
+    appendLog(`▶ Job ${currentJob.slice(0,8)} démarré — entry=${truncUrl(currentEntryUrl)}`, 'step');
+    EquirankState.set(ST_KEY, currentJob);
+    pollStatus();
+  } catch(e) {
+    errEl.textContent = 'Serveur injoignable.';
+    errEl.classList.add('on');
+    document.getElementById('btnStart').disabled = false;
+  }
+}
+
+function truncUrl(u) {
+  if (!u) return '(défaut)';
+  return u.length > 60 ? u.slice(0, 57) + '…' : u;
+}
+
+function resetProgressUi() {
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('pmStep').textContent = '—';
+  document.getElementById('pmUrl').textContent  = '0 / 0';
+  document.getElementById('pmRows').textContent = '0';
+  document.querySelectorAll('.rail-step').forEach(el => el.classList.remove('active', 'done'));
+}
+
+// ─────────────────────────────────────────────
+// Polling crawl
+// ─────────────────────────────────────────────
+async function pollStatus() {
+  if (!currentJob) return;
+  try {
+    const r = await fetch(`/api/crawl/status/${currentJob}?cursor=${lastCursor}`);
+    // 404 = job inconnu côté serveur (uvicorn a redémarré → state RAM perdu).
+    // On stoppe le polling et on nettoie le sessionStorage pour ne pas
+    // reboucler en 404 à chaque rechargement de page.
+    if (r.status === 404) {
+      appendLog('⚠ Job introuvable côté serveur (redémarrage ?) — polling arrêté.', 'error');
+      EquirankState.clear(ST_KEY);
+      currentJob = null;
+      document.getElementById('btnStart').disabled = false;
+      return;
+    }
+    const j = await r.json();
+    // Si le serveur renvoie un cursor numérique, on l'utilise. Sinon
+    // (réponse erreur ou champ absent) on garde l'ancien pour ne PAS
+    // envoyer `cursor=undefined` à la prochaine requête (→ 422).
+    if (typeof j.cursor === 'number') lastCursor = j.cursor;
+
+    (j.events || []).forEach(applyEvent);
+
+    if (j.state === 'done')  { finishCrawl(j); return; }
+    if (j.state === 'error') { failCrawl(j);   return; }
+  } catch(e) {
+    appendLog('⚠ erreur réseau pendant le polling — on continue', 'error');
+  }
+  pollTimer = setTimeout(pollStatus, 1500);
+}
+
+function applyEvent(evt) {
+  const kind = evt.type || '';
+
+  if (kind === 'entry_url') {
+    const u = evt.url || '';
+    appendLog(`🌐 URL d'entrée FFE : ${u.length > 90 ? u.slice(0, 90) + '…' : u}`, 'step');
+    appendLog(`   filtres → discipline=${evt.discipline} · ${evt.deb} → ${evt.fin}`);
+    return;
+  }
+  if (kind === 'auth_status') {
+    appendLog(evt.message || (evt.ok ? '✓ Auth OK' : '✗ Auth KO'), evt.ok ? 'success' : 'error');
+    return;
+  }
+
+  if (kind === 'step_started') {
+    setRailStep(evt.step_id, 'active');
+    document.getElementById('pmStep').textContent = evt.step_id;
+    document.getElementById('pmUrl').textContent = '0 / ' + (evt.entry_urls?.length ?? '?');
+    appendLog(`▶ Step ${evt.step_id} démarré — ${evt.entry_urls?.length ?? 0} URL(s)`, 'step');
+  }
+  else if (kind === 'step_progress') {
+    document.getElementById('pmUrl').textContent = `${evt.index} / ${evt.total}`;
+    advanceBar(evt);
+    if (evt.index % 25 === 0) appendLog(`  ${evt.step_id} — ${evt.index}/${evt.total}`);
+  }
+  else if (kind === 'step_finished') {
+    setRailStep(evt.step_id, 'done');
+    appendLog(`✔ Step ${evt.step_id} terminé — ${evt.row_count} rows, ${evt.url_count} URL(s)`, 'success');
+  }
+  else if (kind === 'error') {
+    appendLog(`✗ Erreur : ${evt.message || ''}`, 'error');
+  }
+  else if (kind === 'ffe_done') {
+    appendLog(`✅ Pipeline terminé — ${evt.rows} lignes dans le dataset final`, 'success');
+  }
+}
+
+function setRailStep(stepId, cls) {
+  const el = document.querySelector(`.rail-step[data-step="${stepId}"]`);
+  if (!el) return;
+  if (cls === 'active') el.classList.add('active');
+  else if (cls === 'done') { el.classList.remove('active'); el.classList.add('done'); }
+}
+
+function advanceBar(evt) {
+  const order  = ['s1','s2','s3','s4','s5'];
+  const idx    = order.indexOf(evt.step_id);
+  if (idx < 0 || !evt.total) return;
+  const within = evt.index / evt.total;
+  const pct    = ((idx + within) / order.length) * 100;
+  document.getElementById('progressBar').style.width = Math.min(100, pct) + '%';
+}
+
+function appendLog(text, cls, target) {
+  const box = document.getElementById(target || 'logBox');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + (cls || '');
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function finishCrawl(j) {
+  EquirankState.clear(ST_KEY);
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('progressBar').style.width = '100%';
+  const card = document.getElementById('resultCard');
+  card.classList.remove('error');
+  card.classList.add('on');
+  document.getElementById('resultTitle').textContent = 'Crawl terminé ✓';
+  document.getElementById('resultSub').textContent =
+    `Job ${j.job_id.slice(0,8)} — ${j.dataset_rows} lignes dans le dataset final.`;
+
+  const metrics = document.getElementById('resMetrics');
+  metrics.innerHTML = '';
+  const cells = [
+    { label: 'Lignes dataset', val: j.dataset_rows },
+    { label: 'Rows brutes',    val: j.total_rows },
+    { label: 'URLs visitées',  val: j.total_urls },
+    { label: 'Job',            val: j.job_id.slice(0, 8) },
+  ];
+  cells.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'res-metric';
+    el.innerHTML = `<div class="res-metric-label">${c.label}</div><div class="res-metric-val">${c.val}</div>`;
+    metrics.appendChild(el);
+  });
+
+  document.getElementById('btnDownload').href = `/api/crawl/download/${j.job_id}`;
+  appendLog(`📥 Téléchargement prêt.`, 'success');
+}
+
+function failCrawl(j) {
+  EquirankState.clear(ST_KEY);
+  document.getElementById('btnStart').disabled = false;
+  const card = document.getElementById('resultCard');
+  card.classList.add('on', 'error');
+  document.getElementById('resultTitle').textContent = 'Crawl en échec';
+  document.getElementById('resultSub').textContent = j.error || 'Erreur inconnue.';
+  appendLog(`✗ ${j.error || 'Erreur'}`, 'error');
+}
+
+// ─────────────────────────────────────────────
+// Restauration du dataset par défaut (rebind data/+models/ sur le
+// snapshot 'default' capturé au 1er démarrage). Le predictor recharge
+// automatiquement les artefacts au prochain /api/predict.
+// ─────────────────────────────────────────────
+async function restoreDefault() {
+  if (!confirm('Restaurer le dataset / modèle par défaut ? Cela bascule la prédiction sur l\'état d\'origine (capturé au 1er démarrage).')) return;
+  const msg = document.getElementById('resultMsg');
+  msg.classList.remove('on');
+  try {
+    const r = await fetch('/api/datasets/restore-default', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Restauration échouée');
+    msg.style.color = 'var(--ok)';
+    msg.textContent = `🛡️ Dataset par défaut restauré (${j.snapshot.label}). Le modèle d'origine est de nouveau actif sur la page de prédiction.`;
+    msg.classList.add('on');
+  } catch(e) {
+    msg.style.color = 'var(--err)';
+    msg.textContent = '✗ ' + (e.message || e);
+    msg.classList.add('on');
+  }
+}
+
+// ─────────────────────────────────────────────
+// Pipeline post-crawl : adapt + train + reload
+// ─────────────────────────────────────────────
+async function startTraining() {
+  if (!currentJob) return;
+  const msg = document.getElementById('resultMsg');
+  msg.classList.remove('on');
+  document.getElementById('btnTrain').disabled = true;
+  document.getElementById('trainCard').classList.add('on');
+  document.getElementById('trainLog').innerHTML = '';
+  appendLog(`▶ Pipeline d'apprentissage démarré`, 'step', 'trainLog');
+
+  try {
+    const r = await fetch(`/api/crawl/train/${currentJob}`, { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Impossible de lancer le pipeline.');
+    currentPipeline = j.pipeline_id;
+    pollTraining();
+  } catch(e) {
+    document.getElementById('btnTrain').disabled = false;
+    msg.style.color = 'var(--err)';
+    msg.textContent = '✗ ' + (e.message || e);
+    msg.classList.add('on');
+  }
+}
+
+async function pollTraining() {
+  if (!currentPipeline) return;
+  try {
+    const r = await fetch(`/api/crawl/train/status/${currentPipeline}`);
+    const j = await r.json();
+    // Re-render complet du log (snapshot pour rester simple)
+    const box = document.getElementById('trainLog');
+    box.innerHTML = '';
+    (j.logs || []).forEach(line => {
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      if (line.includes('OK') || line.includes('Reload')) div.classList.add('success');
+      if (line.startsWith('[') && line.includes('✗')) div.classList.add('error');
+      if (line.includes('Lancement')) div.classList.add('step');
+      div.textContent = line;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+
+    if (j.state === 'done') {
+      const msg = document.getElementById('resultMsg');
+      msg.style.color = 'var(--ok)';
+      msg.textContent = `✓ Pipeline terminé — modèle rechargé. Va sur /predire pour tester.`;
+      msg.classList.add('on');
+      document.getElementById('btnTrain').disabled = false;
+      return;
+    }
+    if (j.state === 'error') {
+      const msg = document.getElementById('resultMsg');
+      msg.style.color = 'var(--err)';
+      msg.textContent = '✗ ' + (j.error || 'Pipeline en échec');
+      msg.classList.add('on');
+      document.getElementById('btnTrain').disabled = false;
+      return;
+    }
+  } catch(e) {
+    // ignore — on retentera
+  }
+  trainTimer = setTimeout(pollTraining, 2000);
+}
+
+// ─────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────
+setDefaultDates();
+loadFilters();
+
+// ─────────────────────────────────────────────
+// Persistance : restaure le formulaire + auto-resume du job
+// ─────────────────────────────────────────────
+['deb','fin','username','filRegion','filDepartement','filChampionnat']
+  .forEach(id => EquirankState.bindField(id, 'cr.' + id));
+setTimeout(() => EquirankState.bindField('discipline', 'cr.discipline'), 500);
+
+const savedJob = EquirankState.get(ST_KEY, null);
+if (savedJob) {
+  currentJob = savedJob;
+  document.getElementById('progressCard').classList.add('on');
+  document.getElementById('pmJob').textContent = savedJob.slice(0, 8);
+  appendLog(`↩ Reprise du job ${savedJob.slice(0,8)} (changé de page)`, 'step');
+  pollStatus();
+}
+</script>
+</body>
+</html>
