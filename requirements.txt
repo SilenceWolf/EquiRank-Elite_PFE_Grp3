@@ -1,0 +1,26 @@
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+lightgbm>=4.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+shap>=0.43.0
+streamlit>=1.28.0
+requests>=2.31.0
+requests[socks]>=2.31.0      # support SOCKS5 pour rotation IP via Tor (anti-ban FFE)
+PySocks>=1.7.1               # backend SOCKS utilisé par requests[socks]
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+joblib>=1.3.0
+plotly>=5.17.0
+imbalanced-learn>=0.11.0
+
+# ─── Equirank — frontend FastAPI + crawler FFE ────────────────────────
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.8
+python-multipart>=0.0.9     # nécessaire pour UploadFile (import CSV historique)
+# Playwright n'est requis que pour ffe_crawler (pas pour Equirank)
+playwright>=1.44.0
+

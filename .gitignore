@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Crawler runtime
+crawlresult/
+ffe_crawler/engine/log/*.log
+ffe_crawler/engine/log/*.jsonl
+
+# Secrets / local config
+.env
+.env.local
+*.secret
+
+# Playwright
+.playwright/
