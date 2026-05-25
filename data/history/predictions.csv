@@ -1,0 +1,6 @@
+﻿ts,cheval,cavalier,discipline,epreuve,hauteur,classement_estime,proba,verdict,is_cold_start,model_name,snapshot,id
+2026-05-25T04:10:25,TESTHORSE,TESTRIDER,CSO,,80,5,50,outsider+,False,LightGBM,,b55c12f60bce
+2026-05-25T04:11:32,FALCO DES VIALETTES,CELESTE CIFONELLI,CSO,,80,13,2,outsider,False,LightGBM,default,79e1940cf384
+2026-05-25T04:11:32,ETOILE,,Equifun,,,20,4,cold-start,True,LightGBM,default,d0626199ab8e
+2026-05-25T04:20:39,FAIR PLAY,,PMG International,,,1,100,cold-start,True,LightGBM,default,6437d1d9cd55
+2026-05-25T22:25:59,FALCO DES VIALETTES,CELESTE CIFONELLI,Dressage,,,8,2,,False,LightGBM,default,b6c63a8be118
