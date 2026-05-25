@@ -33,5 +33,7 @@ ffe_crawler/engine/log/*.jsonl
 .env.local
 *.secret
 
+.claude/settings.local.json
+
 # Playwright
 .playwright/
