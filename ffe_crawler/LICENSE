@@ -1,0 +1,38 @@
+PROPRIETARY LICENSE
+
+Copyright (c) 2026 PFE EquiRank Elite Team — All rights reserved.
+
+Team members (joint copyright holders):
+  - Louis Guillory (Silence Wolf)
+  - Karlotta Martin
+  - Mathéo Isidoro
+  - Mattéo D'Andrea
+  - Melvin Bandeira
+  - Yohan Cana
+
+This software, its source code, data, and all associated assets are the
+exclusive intellectual property of the team listed above, in the context
+of the "EquiRank Elite" graduation project (PFE) — Projet IA 2025/2026.
+
+NO PERMISSIONS ARE GRANTED. The following actions are strictly prohibited
+without the prior written consent of ALL copyright holders listed above:
+
+  - Use, copy, modify, merge, publish, or distribute this software
+  - Sublicense or sell copies of this software or any derivative works
+  - Use any portion of this code in any other project, commercial or otherwise
+  - Reverse engineer, decompile, or disassemble this software
+
+NOTICE — Embedded crawler engine
+--------------------------------
+The directory `engine/` is a verbatim copy of the generic web-crawler
+toolbox developed by Louis Guillory (Silence Wolf) prior to this project,
+and is bundled here for autonomy of the PFE. That subdirectory remains
+the personal work of Louis Guillory and is governed by its own
+PROPRIETARY license — see file headers within `engine/`.
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+For permissions or inquiries, contact the team lead:
+  louis.guillory@edu.esiee-it.fr

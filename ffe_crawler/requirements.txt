@@ -1,0 +1,12 @@
+# Crawler FFE — dépendances. À installer dans le venv du PFE (PFE_v2/PFE/.venv).
+# pip install -r ffe_crawler/requirements.txt && playwright install chromium
+
+# Moteur de crawl (copié depuis outils/crawler/)
+requests>=2.32.0
+beautifulsoup4>=4.12.0
+playwright>=1.44.0
+lxml>=5.2.0
+
+# UI Streamlit (déjà présente dans le venv PFE — listée ici pour usage standalone)
+streamlit>=1.35
+pandas>=2.0
