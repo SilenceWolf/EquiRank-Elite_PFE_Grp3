@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+  Page Datasets — gestion des snapshots dataset/modèle.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Datasets</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<style>
+  .ds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .ds-card {
+    background: var(--bg2); border: 1px solid var(--gold-border);
+    padding: 1.25rem 1.25rem 1rem; position: relative; transition: border-color 0.2s;
+  }
+  .ds-card.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim) inset; }
+  .ds-card .badge {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 3px 8px; border: 1px solid var(--cyan); color: var(--cyan);
+  }
+  .ds-card .badge.active { color: var(--ok); border-color: var(--ok); }
+  .ds-card .badge.default { color: var(--gold); border-color: var(--gold); }
+  .ds-label {
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px;
+    letter-spacing: 2px; color: var(--text); margin-bottom: 0.5rem; padding-right: 5rem;
+  }
+  .ds-meta { font-size: 13px; color: var(--text-muted); letter-spacing: 1px; line-height: 1.6; margin-bottom: 0.5rem; }
+  .ds-meta strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px; }
+  .ds-desc { font-size: 13px; color: var(--text-muted); font-family: 'Montserrat', sans-serif; font-style: italic; line-height: 1.5; margin: 0.5rem 0 0.75rem; }
+  .ds-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(245,195,65,0.1); }
+  .ds-btn {
+    flex: 1; min-width: 110px;
+    padding: 7px 12px;
+    font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-family: 'Rajdhani', sans-serif; font-weight: 600;
+    background: transparent; cursor: pointer; text-decoration: none; text-align: center;
+    transition: background 0.2s;
+  }
+  .ds-btn.activate { border: 1px solid var(--cyan); color: var(--cyan); }
+  .ds-btn.activate:hover { background: var(--cyan-dim); }
+  .ds-btn.delete   { border: 1px solid var(--err);  color: var(--err);  }
+  .ds-btn.delete:hover { background: rgba(255,61,61,0.1); }
+  .ds-btn.disabled { opacity: 0.3; pointer-events: none; }
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    background: var(--bg2); border: 1px solid var(--gold);
+    color: var(--text); padding: 1rem 1.5rem;
+    font-size: 13px; letter-spacing: 0.5px;
+    display: none; max-width: 350px;
+  }
+  .toast.on { display: block; animation: fadeUp 0.3s ease both; }
+  .toast.error { border-color: var(--err); }
+  .toast.ok    { border-color: var(--ok); }
+</style>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets" class="active">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <button class="nav-cta" onclick="restoreDefault()">🛡️ Restaurer défaut</button>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Snapshots dataset / modèle</div>
+    <h1 class="hero-title">Datasets <span>FFE</span></h1>
+  </div>
+
+  <div class="pred-card">
+    <div class="card-title">📦 Datasets disponibles</div>
+    <div class="card-sub">
+      Chaque crawl + entraînement crée automatiquement un snapshot.
+      <strong>Activer</strong> un snapshot bascule la page de prédiction et
+      les recherches sur son dataset / modèle dédié. Le snapshot <em>default</em>
+      n'est jamais supprimable — c'est ton point de restauration.
+    </div>
+
+    <div id="dsList" class="ds-grid"></div>
+    <div class="empty-msg" id="dsEmpty" style="display:none">Aucun snapshot. Lance un crawl pour en créer un automatiquement.</div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.className = 'toast on ' + (kind || '');
+  t.textContent = msg;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function loadList() {
+  const listEl  = document.getElementById('dsList');
+  const emptyEl = document.getElementById('dsEmpty');
+  listEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/datasets');
+    const j = await r.json();
+    const snaps = j.snapshots || [];
+    if (snaps.length === 0) { emptyEl.style.display = 'block'; return; }
+    emptyEl.style.display = 'none';
+
+    snaps.forEach(s => listEl.appendChild(renderCard(s)));
+  } catch(e) {
+    emptyEl.textContent = 'Erreur de chargement.';
+    emptyEl.style.display = 'block';
+  }
+}
+
+function renderCard(s) {
+  const card = document.createElement('div');
+  card.className = 'ds-card' + (s.is_active ? ' active' : '');
+
+  let badgeHtml = '';
+  if (s.is_active)      badgeHtml = '<span class="badge active">● Actif</span>';
+  else if (s.is_default) badgeHtml = '<span class="badge default">Défaut</span>';
+
+  const accPct = s.accuracy ? (s.accuracy * 100).toFixed(1) + '%' : '—';
+  const created = s.created_at ? s.created_at.split('T')[0] : '—';
+
+  const desc = s.description
+    ? `<div class="ds-desc">${esc(s.description)}</div>` : '';
+
+  // Actions : Activer (si pas actif) + Supprimer (si pas default ni actif)
+  const canActivate = !s.is_active;
+  const canDelete   = !s.is_default && !s.is_active;
+
+  card.innerHTML = `
+    ${badgeHtml}
+    <div class="ds-label">${esc(s.label)}</div>
+    <div class="ds-meta">
+      ID : <code style="color:var(--text-muted)">${esc(s.snapshot_id)}</code><br>
+      <strong>${s.n_rows.toLocaleString('fr-FR')}</strong>lignes · <strong>${accPct}</strong>précision · ${esc(s.model_name) || 'modèle inconnu'}<br>
+      Créé le ${created}
+    </div>
+    ${desc}
+    <div class="ds-actions">
+      <button class="ds-btn activate ${canActivate ? '' : 'disabled'}"
+              onclick="activate('${esc(s.snapshot_id)}')">
+        ${s.is_active ? '✓ Actuellement actif' : '⚡ Activer pour prédire'}
+      </button>
+      <button class="ds-btn delete ${canDelete ? '' : 'disabled'}"
+              onclick="del('${esc(s.snapshot_id)}', '${esc(s.label)}')">🗑 Supprimer</button>
+    </div>`;
+  return card;
+}
+
+async function activate(snapshot_id) {
+  try {
+    const r = await fetch('/api/datasets/activate/' + encodeURIComponent(snapshot_id), { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Activation échouée');
+    toast(`✓ Dataset « ${j.snapshot.label} » activé.`, 'ok');
+    loadList();
+  } catch(e) {
+    toast('✗ ' + (e.message || e), 'error');
+  }
+}
+
+async function restoreDefault() {
+  try {
+    const r = await fetch('/api/datasets/restore-default', { method: 'POST' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Restauration échouée');
+    toast('🛡️ Dataset par défaut restauré. Modèle d\'origine actif.', 'ok');
+    loadList();
+  } catch(e) {
+    toast('✗ ' + (e.message || e), 'error');
+  }
+}
+
+async function del(snapshot_id, label) {
+  if (!confirm(`Supprimer le snapshot « ${label} » ? (irréversible)`)) return;
+  try {
+    const r = await fetch('/api/datasets/' + encodeURIComponent(snapshot_id), { method: 'DELETE' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Suppression échouée');
+    toast('🗑 Snapshot supprimé.', 'ok');
+    loadList();
+  } catch(e) {
+    toast('✗ ' + (e.message || e), 'error');
+  }
+}
+
+loadList();
+</script>
+</body>
+</html>

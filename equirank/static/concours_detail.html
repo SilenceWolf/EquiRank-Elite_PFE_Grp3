@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Détail concours</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<style>
+  .epreuve-block { margin-bottom: 2rem; }
+  .epreuve-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px;
+    color: var(--gold); margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem; border-bottom: 1px solid var(--gold-border);
+  }
+  .filter-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-row input { flex: 1; min-width: 200px; }
+</style>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions" class="active">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <a href="/predictions" class="nav-cta">← Liste</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Concours futur</div>
+    <h1 class="hero-title">Concours <span id="concNum">…</span></h1>
+    <div id="concMeta" style="margin-top:1rem; color: var(--text-muted); font-size: 13px; letter-spacing: 1px;"></div>
+  </div>
+
+  <div class="pred-card">
+    <div class="card-title">Participants & prédictions</div>
+    <div class="card-sub">Une ligne par engagement. La proba est celle du modèle PFE (LightGBM).</div>
+
+    <div class="filter-row">
+      <div class="field" style="margin-bottom:0; flex:1">
+        <input type="text" id="filterInput" placeholder="Filtrer par cheval, cavalier ou épreuve…" autocomplete="off">
+      </div>
+      <a class="btn-ghost" id="btnDownloadConcours" href="#" download>⬇ CSV concours</a>
+      <a class="btn-ghost" id="btnBack" href="/predictions">← Tous les concours</a>
+    </div>
+
+    <div id="content"></div>
+    <div class="empty-msg" id="empty" style="display:none">Aucun participant.</div>
+    <div class="empty-msg" id="loading">Chargement…</div>
+    <div style="margin-top:1.5rem;font-size:13px;color:var(--text-muted);letter-spacing:0.5px;font-family:'Montserrat',sans-serif;">
+      <span style="color:var(--cyan)">✦ Estimation*</span>
+      = au moins le cheval ou le cavalier est absent du dataset d'entraînement.
+      La proba est calculée à partir du contexte (discipline, niveau d'épreuve, etc.)
+      avec une baseline de win-rate. Précision moindre que pour un duo connu.
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+const concoursId = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+document.getElementById('concNum').textContent = concoursId;
+document.getElementById('btnDownloadConcours').href =
+  '/api/predictions/download/' + encodeURIComponent(concoursId);
+
+let allRows = [];
+
+async function loadDetail() {
+  try {
+    const r = await fetch('/api/predictions/' + encodeURIComponent(concoursId));
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      document.getElementById('content').innerHTML = '';
+      document.getElementById('empty').textContent = j.detail || 'Concours introuvable.';
+      document.getElementById('empty').style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      return;
+    }
+    const j = await r.json();
+    allRows = j.engagements || [];
+    document.getElementById('concMeta').textContent =
+      (j.disciplines || []).join(' / ') +
+      ' — ' + allRows.length + ' engagement(s) sur ' + (j.epreuves?.length || 0) + ' épreuve(s)';
+    render(allRows);
+    document.getElementById('loading').style.display = 'none';
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Erreur réseau.';
+  }
+}
+
+function render(rows) {
+  const root = document.getElementById('content');
+  root.innerHTML = '';
+
+  if (!rows || rows.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+  document.getElementById('empty').style.display = 'none';
+
+  // Regroupement par épreuve, tri intra-épreuve par proba décroissante
+  const groups = {};
+  rows.forEach(r => {
+    const ep = r['s3_Épreuve'] || '(épreuve inconnue)';
+    (groups[ep] = groups[ep] || []).push(r);
+  });
+
+  Object.keys(groups).sort().forEach(ep => {
+    const list = groups[ep].slice().sort((a,b) => probaNum(b) - probaNum(a));
+
+    const block = document.createElement('div');
+    block.className = 'epreuve-block';
+    block.innerHTML = `<div class="epreuve-title">${esc(ep)} — ${list.length} engagé(s)</div>`;
+
+    const tbl = document.createElement('table');
+    tbl.className = 'parts-table';
+    tbl.innerHTML = `
+      <thead><tr>
+        <th style="text-align:center">Classt prédit</th>
+        <th>Cheval</th><th>Cavalier</th><th>Club</th>
+        <th style="text-align:center">Proba</th><th>Verdict</th>
+      </tr></thead><tbody></tbody>`;
+
+    const tbody = tbl.querySelector('tbody');
+    list.forEach(row => {
+      const rank  = row.classement_predit ?? '—';
+      const proba = (row.proba === '' || row.proba === undefined || row.proba === null) ? '—' : row.proba + '%';
+      const klass = verdictClass(row.verdict);
+      const rankCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+      const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="rank ${rankCls}">${rankIcon} ${rank}<span style="font-size:12px;color:var(--text-muted);letter-spacing:1px;">e</span></td>
+        <td class="cheval">${esc(row['s4_Équidé'])}</td>
+        <td class="cavalier">${esc(row['s4_Cavalier'])}</td>
+        <td>${esc(row['s4_Club engageur'])}</td>
+        <td class="proba ${klass}">${proba}</td>
+        <td style="font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">${verdictLabel(row.verdict)}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    block.appendChild(tbl);
+    root.appendChild(block);
+  });
+}
+
+function probaNum(row) {
+  const v = row?.proba;
+  if (v === '' || v === undefined || v === null) return -1;
+  return Number(v);
+}
+
+function verdictClass(v) {
+  if (v === 'favori')     return 'favori';
+  if (v === 'outsider+')  return 'outsiderp';
+  if (v === 'outsider')   return 'outsider';
+  if (v === 'cold-start') return 'coldstart';
+  return 'inconnu';
+}
+
+function verdictLabel(v) {
+  if (v === 'favori')     return '★ Favori';
+  if (v === 'outsider+')  return '◆ Outsider+';
+  if (v === 'outsider')   return '▲ Outsider';
+  if (v === 'cold-start') return '✦ Estimation*';
+  return '— inconnu';
+}
+
+function esc(s) {
+  if (s === undefined || s === null) return '—';
+  const str = String(s);
+  if (!str || str === 'NONE') return '—';
+  return str.replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Filtre live (côté client — pas d'appel serveur)
+let filterTimer = null;
+document.getElementById('filterInput').addEventListener('input', e => {
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(() => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { render(allRows); return; }
+    const filtered = allRows.filter(r => {
+      const hay = ((r['s4_Équidé']||'') + ' ' + (r['s4_Cavalier']||'') + ' ' + (r['s3_Épreuve']||'')).toLowerCase();
+      return hay.includes(q);
+    });
+    render(filtered);
+  }, 150);
+});
+
+loadDetail();
+</script>
+</body>
+</html>

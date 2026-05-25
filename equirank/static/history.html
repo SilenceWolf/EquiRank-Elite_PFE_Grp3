@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+  Page Historique — liste des fichiers CSV de data/history/.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Historique</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<style>
+  .h-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .h-card {
+    background: var(--bg2); border: 1px solid var(--gold-border);
+    padding: 1.25rem; position: relative; transition: border-color 0.2s, transform 0.15s;
+    cursor: pointer; text-decoration: none; color: inherit; display: block;
+  }
+  .h-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+  .h-card.main { border-left: 3px solid var(--gold); }
+  .h-card .badge {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 3px 8px; border: 1px solid var(--gold); color: var(--gold);
+  }
+  .h-card .fname {
+    font-family: 'Bebas Neue', sans-serif; font-size: 18px;
+    letter-spacing: 1.5px; color: var(--text); margin-bottom: 0.6rem;
+    padding-right: 5rem; word-break: break-all;
+  }
+  .h-card.main .fname { color: var(--gold); }
+  .h-card .stats { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 13px; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
+  .h-card .stats strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; margin-right: 3px; letter-spacing: 1px; }
+  .h-card .meta { font-size: 12px; color: var(--text-dim); margin-top: 0.7rem; letter-spacing: 0.5px; }
+  .h-card .actions {
+    position: absolute; bottom: 0.75rem; right: 0.75rem;
+    display: flex; gap: 0.4rem;
+  }
+  .h-card .actions a, .h-card .actions button {
+    background: transparent; padding: 3px 9px; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; font-size: 13px;
+    text-decoration: none;
+  }
+  .h-card .actions .dl   { border: 1px solid var(--cyan); color: var(--cyan); }
+  .h-card .actions .dl:hover { background: var(--cyan-dim); }
+  .h-card .actions .del  { border: 1px solid var(--err);  color: var(--err);  }
+  .h-card .actions .del:hover { background: rgba(255,61,61,0.1); }
+  .h-card .actions .del.disabled { opacity: 0.25; pointer-events: none; }
+
+  /* Upload zone — fond teinté propre, pas de pointillés moches */
+  .upload-zone {
+    display: block;
+    margin-top: 1rem;
+    border: 1px solid var(--gold-border);
+    background: rgba(245,195,65,0.04);
+    padding: 1.5rem 1rem;
+    text-align: center;
+    font-size: 13px; letter-spacing: 0.5px; color: var(--text-muted);
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .upload-zone:hover, .upload-zone.drag { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+  .upload-zone input { display: none; }
+  .upload-zone code { color: var(--cyan); font-size: 13px; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    background: var(--bg2); border: 1px solid var(--gold);
+    color: var(--text); padding: 1rem 1.5rem;
+    font-size: 13px; letter-spacing: 0.5px;
+    display: none; max-width: 400px;
+  }
+  .toast.on { display: block; animation: fadeUp 0.3s ease both; }
+  .toast.error { border-color: var(--err); }
+  .toast.ok    { border-color: var(--ok); }
+</style>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history" class="active">Historique</a></li>
+  </ul>
+  <a href="/" class="nav-cta">← Prédire</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Fichiers de prédictions enregistrées</div>
+    <h1 class="hero-title">Historique <span>FFE</span></h1>
+  </div>
+
+  <div class="pred-card">
+    <div>
+      <div class="card-title">Fichiers CSV disponibles</div>
+      <div class="card-sub">Clique sur un fichier pour ouvrir ses prédictions triées par classement. Bouton <code>↓</code> en bas à droite de chaque carte pour exporter ce fichier.</div>
+    </div>
+
+    <div id="filesGrid" class="h-grid"></div>
+    <div class="empty-msg" id="filesEmpty" style="display:none">Aucun fichier dans <code>data/history/</code>.</div>
+
+    <label class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".csv,text/csv" multiple>
+      <div><strong style="color:var(--gold);font-family:'Bebas Neue',sans-serif;letter-spacing:2px;font-size:20px;">+ IMPORTER</strong>
+        <span style="margin-left:0.6rem;">clique ou glisse un (ou plusieurs) <code>.csv</code> ici</span></div>
+    </label>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.className = 'toast on ' + (kind || '');
+  t.textContent = msg;
+  setTimeout(() => t.className = 'toast', 4000);
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' o';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' Ko';
+  return (bytes/1024/1024).toFixed(1) + ' Mo';
+}
+
+// ───── Grille de fichiers ─────
+async function loadFiles() {
+  const grid  = document.getElementById('filesGrid');
+  const empty = document.getElementById('filesEmpty');
+  try {
+    const r = await fetch('/api/history/files');
+    const j = await r.json();
+    const files = j.files || [];
+    grid.innerHTML = '';
+    if (files.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    files.forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'h-card' + (f.is_main ? ' main' : '');
+      const proba = (f.avg_proba != null) ? (f.avg_proba + '%') : '—';
+      const discs = (f.disciplines || []).slice(0, 2).join(' · ') + (f.disciplines && f.disciplines.length > 2 ? '…' : '');
+      const badge = f.is_main ? '<span class="badge">Auto</span>' : '';
+      const delHtml = f.is_main
+        ? '<button class="del disabled" title="Fichier principal — non supprimable">×</button>'
+        : `<button class="del" onclick="event.stopPropagation();delFile('${esc(f.name)}')" title="Supprimer ce fichier">×</button>`;
+      const dlUrl  = '/api/history/file/' + encodeURIComponent(f.name) + '/download';
+      card.innerHTML = `
+        ${badge}
+        <div class="fname">${esc(f.name)}</div>
+        <div class="stats">
+          <span><strong>${f.n_rows}</strong>lignes</span>
+          <span><strong>${proba}</strong>proba moy.</span>
+          <span><strong>${f.n_cold || 0}</strong>cold-start</span>
+        </div>
+        <div class="meta">${esc(discs) || '—'} · ${fmtSize(f.size_bytes)} · ${fmtDate(f.modified)}</div>
+        <div class="actions">
+          <a class="dl" href="${dlUrl}" download onclick="event.stopPropagation()" title="Télécharger ce CSV">↓</a>
+          ${delHtml}
+        </div>`;
+      card.addEventListener('click', () => {
+        window.location.href = '/history/' + encodeURIComponent(f.name);
+      });
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    grid.innerHTML = '';
+    empty.textContent = 'Erreur de chargement.';
+    empty.style.display = 'block';
+  }
+}
+
+async function delFile(name) {
+  if (!confirm(`Supprimer le fichier « ${name} » du dossier data/history/ ?\n(Le fichier sera retiré du disque.)`)) return;
+  try {
+    const r = await fetch('/api/history/files/' + encodeURIComponent(name), { method: 'DELETE' });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || 'Suppression échouée');
+    toast('Fichier supprimé.', 'ok');
+    loadFiles();
+  } catch(e) {
+    toast('✗ ' + (e.message || e), 'error');
+  }
+}
+
+// ───── Upload (clic + drag-and-drop) ─────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', () => uploadAll(fileInput.files));
+['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); dropZone.classList.add('drag');
+}));
+['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+}));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadAll(e.dataTransfer.files);
+});
+
+async function uploadAll(fileList) {
+  if (!fileList || fileList.length === 0) return;
+  for (const f of fileList) {
+    if (!f.name.toLowerCase().endsWith('.csv')) {
+      toast(`✗ « ${f.name} » n'est pas un .csv — ignoré.`, 'error');
+      continue;
+    }
+    const fd = new FormData();
+    fd.append('file', f, f.name);
+    try {
+      const r = await fetch('/api/history/import', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (j.error) {
+        toast(`⚠ « ${j.filename || f.name} » importé mais : ${j.error}`, 'error');
+      } else {
+        toast(`« ${j.filename} » importé — ${j.n_rows} ligne(s).`, 'ok');
+      }
+    } catch(e) {
+      toast(`✗ Upload de « ${f.name} » échoué : ${e.message || e}`, 'error');
+    }
+  }
+  fileInput.value = '';
+  loadFiles();
+}
+
+loadFiles();
+</script>
+</body>
+</html>

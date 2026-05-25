@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Prédictions</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions" class="active">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history">Historique</a></li>
+  </ul>
+  <a href="/crawl-predict" class="nav-cta">+ Nouveau crawl</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Concours à venir — prédictions du modèle</div>
+    <h1 class="hero-title">Prédictions <span>FFE</span></h1>
+  </div>
+
+  <!-- ── Recherche ── -->
+  <div class="pred-card">
+    <div class="card-title">🔍 Recherche</div>
+    <div class="card-sub">Cherche un cheval, un cavalier ou un numéro de concours dans les crawls futurs déjà effectués. Une ligne par participant par concours.</div>
+
+    <div class="field">
+      <input type="text" id="search" placeholder="Ex: FALCO, MARTIN, 2519306..." autocomplete="off">
+    </div>
+
+    <div id="searchResults" style="margin-top: 1rem; display:none">
+      <table class="parts-table" id="searchTable">
+        <thead><tr>
+          <th>Concours</th><th>Discipline</th><th>Épreuve</th>
+          <th>Cheval</th><th>Cavalier</th><th>Club</th>
+          <th style="text-align:center">Proba</th>
+        </tr></thead>
+        <tbody id="searchBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-msg" id="searchEmpty" style="display:none">Aucun résultat.</div>
+  </div>
+
+  <!-- ── Liste des concours crawlés ── -->
+  <div class="pred-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <div class="card-title">📋 Concours crawlés</div>
+        <div class="card-sub">Clique sur une carte pour afficher tous ses participants. Le bouton télécharge le CSV.</div>
+      </div>
+      <a class="btn-ghost" id="btnDownloadAll" href="/api/predictions/download" download>⬇ Tout télécharger (CSV)</a>
+    </div>
+
+    <div id="concoursList" class="concours-grid"></div>
+    <div class="empty-msg" id="concoursEmpty" style="display:none">
+      Aucun concours futur crawlé pour le moment.
+      <br><br>
+      <a class="btn-ghost" href="/crawl-predict">Lancer un crawl predict</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// Liste des concours
+// ─────────────────────────────────────────────
+async function loadConcours() {
+  const listEl  = document.getElementById('concoursList');
+  const emptyEl = document.getElementById('concoursEmpty');
+  try {
+    const r = await fetch('/api/predictions/concours');
+    const j = await r.json();
+    const items = j.concours || [];
+    listEl.innerHTML = '';
+    if (items.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    items.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'concours-card';
+      card.style.position = 'relative';
+      const proba = (c.avg_proba !== null && c.avg_proba !== undefined) ? c.avg_proba + '%' : '—';
+      const concUrl = '/predictions/' + encodeURIComponent(c.concours_id);
+      const dlUrl   = '/api/predictions/download/' + encodeURIComponent(c.concours_id);
+      card.innerHTML = `
+        <a href="${concUrl}" style="display:block;text-decoration:none;color:inherit;">
+          <div class="num">N° ${c.concours_id}</div>
+          <div class="disc">${c.discipline || '—'}</div>
+          <div class="stats">
+            <span><strong>${c.engagements}</strong>engagés</span>
+            <span><strong>${c.epreuves}</strong>épreuves</span>
+            <span><strong>${proba}</strong>proba moy.</span>
+          </div>
+        </a>
+        <a href="${dlUrl}" download title="Télécharger le CSV de ce concours"
+           style="position:absolute;top:0.75rem;right:0.75rem;color:var(--cyan);text-decoration:none;font-size:18px;line-height:1;padding:4px 8px;border:1px solid var(--cyan);">⬇</a>`;
+      listEl.appendChild(card);
+    });
+  } catch(e) {
+    listEl.innerHTML = '';
+    emptyEl.textContent = 'Erreur de chargement.';
+    emptyEl.style.display = 'block';
+  }
+}
+
+// ─────────────────────────────────────────────
+// Recherche (débouncée)
+// ─────────────────────────────────────────────
+let debTimer = null;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(() => doSearch(e.target.value.trim()), 200);
+});
+
+async function doSearch(q) {
+  const resEl   = document.getElementById('searchResults');
+  const emptyEl = document.getElementById('searchEmpty');
+  const body    = document.getElementById('searchBody');
+
+  if (!q) {
+    resEl.style.display = 'none';
+    emptyEl.style.display = 'none';
+    return;
+  }
+  try {
+    const r = await fetch('/api/predictions/search?q=' + encodeURIComponent(q));
+    const j = await r.json();
+    const rows = j.results || [];
+    body.innerHTML = '';
+    if (rows.length === 0) {
+      resEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    rows.forEach(row => {
+      const proba   = (row.proba === '' || row.proba === undefined || row.proba === null) ? '—' : row.proba + '%';
+      const klass   = verdictClass(row.verdict);
+      const concNum = row['s2_Numéro'] || '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><a href="/predictions/${encodeURIComponent(concNum)}" style="color:var(--cyan)">N° ${concNum}</a></td>
+        <td>${esc(row['s3_Discipline'])}</td>
+        <td>${esc(row['s3_Épreuve'])}</td>
+        <td class="cheval">${esc(row['s4_Équidé'])}</td>
+        <td class="cavalier">${esc(row['s4_Cavalier'])}</td>
+        <td>${esc(row['s4_Club engageur'])}</td>
+        <td class="proba ${klass}">${proba}</td>`;
+      body.appendChild(tr);
+    });
+    resEl.style.display = 'block';
+  } catch(e) {
+    body.innerHTML = '';
+    resEl.style.display = 'none';
+    emptyEl.textContent = 'Erreur réseau.';
+    emptyEl.style.display = 'block';
+  }
+}
+
+function verdictClass(verdict) {
+  if (verdict === 'favori')     return 'favori';
+  if (verdict === 'outsider+')  return 'outsiderp';
+  if (verdict === 'outsider')   return 'outsider';
+  if (verdict === 'cold-start') return 'coldstart';
+  return 'inconnu';
+}
+
+function esc(s) {
+  if (s === undefined || s === null) return '—';
+  const str = String(s);
+  if (!str || str === 'NONE') return '—';
+  return str.replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+loadConcours();
+</script>
+</body>
+</html>

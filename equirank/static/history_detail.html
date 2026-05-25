@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<!--
+  © 2026 PFE EquiRank Elite — Tous droits réservés.
+  Équipe : Louis Guillory · Karlotta Martin · Mathéo Isidoro
+          · Mattéo D'Andrea · Melvin Bandeira · Yohan Cana.
+  Licence : PROPRIETARY — voir fichier LICENSE à la racine PFE.
+  Page détail d'un fichier d'historique CSV — tableau classement.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquiRank Elite — Détail historique</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/equirank.css?v=3">
+<style>
+  .filter-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-row input { flex: 1; min-width: 200px; }
+  .parts-table tbody tr { cursor: pointer; transition: background 0.15s; }
+  .parts-table tbody tr:hover { background: rgba(245,195,65,0.06); }
+  .epreuve-block { margin-bottom: 2rem; }
+  .epreuve-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem; border-bottom: 1px solid var(--gold-border);
+  }
+  td.del-btn { text-align: center; width: 50px; }
+  td.del-btn button {
+    background: transparent; border: 1px solid var(--err);
+    color: var(--err); font-size: 14px; padding: 3px 9px; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px;
+  }
+  td.del-btn button:hover { background: rgba(255,61,61,0.1); }
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    background: var(--bg2); border: 1px solid var(--gold);
+    color: var(--text); padding: 1rem 1.5rem;
+    font-size: 13px; display: none; max-width: 400px;
+  }
+  .toast.on { display: block; animation: fadeUp 0.3s ease both; }
+  .toast.error { border-color: var(--err); }
+  .toast.ok    { border-color: var(--ok); }
+</style>
+<link rel="icon" type="image/png" href="/logo.png">
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Equi<span>Rank</span> <span style="font-size:13px;letter-spacing:5px;color:var(--gold);">ELITE</span></div>
+  <ul class="nav-links">
+    <li><a href="/">Prédire</a></li>
+    <li><a href="/crawl">Crawler FFE</a></li>
+    <li><a href="/crawl-predict">Crawler Predict</a></li>
+    <li><a href="/predictions">Prédictions</a></li>
+    <li><a href="/datasets">Datasets</a></li>
+    <li><a href="/history" class="active">Historique</a></li>
+  </ul>
+  <a href="/history" class="nav-cta">← Fichiers</a>
+</nav>
+
+<main>
+  <div class="hero-block">
+    <div class="hero-glow"></div>
+    <div class="hero-eyebrow">Détail du fichier</div>
+    <h1 class="hero-title" style="word-break:break-all;font-size:clamp(28px,5vw,52px);"><span id="fname">…</span></h1>
+    <div id="metaLine" style="margin-top:1rem; color: var(--text-muted); font-size: 13px; letter-spacing: 1px;"></div>
+  </div>
+
+  <div class="pred-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <div class="card-title">Prédictions de ce fichier</div>
+        <div class="card-sub">Triées par classement (proba ↓). Clique sur une ligne pour relancer la prédiction sur la page Prédire.</div>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a class="btn-ghost" id="btnDownloadFile" href="#" download>↓ Exporter ce fichier</a>
+        <a class="btn-ghost" href="/history">← Tous les fichiers</a>
+      </div>
+    </div>
+
+    <div class="filter-row" style="margin-top:1.5rem;">
+      <div class="field" style="margin-bottom:0; flex:1">
+        <input type="text" id="searchInput" placeholder="Filtrer par cheval, cavalier ou discipline…" autocomplete="off">
+      </div>
+    </div>
+
+    <table class="parts-table" id="tbl" style="display:none">
+      <thead><tr>
+        <th style="text-align:center">Rang</th>
+        <th>Date</th>
+        <th>Cheval</th><th>Cavalier</th><th>Discipline</th>
+        <th style="text-align:center">Hauteur</th>
+        <th style="text-align:center">Proba</th>
+        <th>Verdict</th>
+        <th>Modèle</th>
+        <th class="del-btn"></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-msg" id="empty">Chargement…</div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="footer-logo">Equi<span>Rank</span> ELITE</div>
+  <div class="footer-copy">© 2026 PFE EquiRank Elite — L. Guillory · K. Martin · M. Isidoro · M. D'Andrea · M. Bandeira · Y. Cana</div>
+</footer>
+
+<script>
+const filename = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+document.getElementById('fname').textContent = filename;
+document.getElementById('btnDownloadFile').href =
+  '/api/history/file/' + encodeURIComponent(filename) + '/download';
+
+const currentSort = 'proba';   // tri par classement uniquement (proba ↓)
+
+function esc(s) {
+  if (s == null) return '—';
+  const str = String(s);
+  if (!str || str === 'NONE') return '—';
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.className = 'toast on ' + (kind || '');
+  t.textContent = msg;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+function verdictClass(v) {
+  if (v === 'favori')     return 'favori';
+  if (v === 'outsider+')  return 'outsiderp';
+  if (v === 'outsider')   return 'outsider';
+  if (v === 'cold-start') return 'coldstart';
+  return 'inconnu';
+}
+function verdictLabel(v) {
+  if (v === 'favori')     return '★ Favori';
+  if (v === 'outsider+')  return '◆ Outsider+';
+  if (v === 'outsider')   return '▲ Outsider';
+  if (v === 'cold-start') return '✦ Estimation';
+  return v || '—';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+let debTimer = null;
+document.getElementById('searchInput').addEventListener('input', e => {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(() => load(e.target.value.trim()), 200);
+});
+
+async function load(q) {
+  const tbody = document.getElementById('tbody');
+  const tbl   = document.getElementById('tbl');
+  const empty = document.getElementById('empty');
+  try {
+    const url = '/api/history/file/' + encodeURIComponent(filename) + '?sort=' + currentSort + (q ? ('&q=' + encodeURIComponent(q)) : '');
+    const r = await fetch(url);
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      empty.textContent = j.detail || 'Fichier introuvable.';
+      empty.style.display = 'block'; tbl.style.display = 'none';
+      return;
+    }
+    const j = await r.json();
+    const rows = j.entries || [];
+    tbody.innerHTML = '';
+
+    // Cache pour downloadGroup() qui réutilise ces rows sans refetch
+    allRowsCache = rows;
+
+    // Méta : nb total + proba moyenne
+    const probas = rows.filter(r => !r.is_cold_start && typeof r.proba === 'number').map(r => r.proba);
+    const avg = probas.length ? (probas.reduce((a,b)=>a+b,0) / probas.length).toFixed(1) : '—';
+    document.getElementById('metaLine').textContent =
+      rows.length + ' entrée(s) · proba moyenne ' + (avg === '—' ? '—' : avg + '%') +
+      ' · ' + rows.filter(r => r.is_cold_start).length + ' cold-start';
+
+    if (rows.length === 0) {
+      empty.textContent = q ? 'Aucune entrée correspondante.' : 'Fichier vide.';
+      empty.style.display = 'block'; tbl.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none'; tbl.style.display = 'none';
+
+    // Spécial `predictions.csv` : c'est le journal des prédictions
+    // UNITAIRES faites sur la page /. Chaque ligne est indépendante
+    // (pas le même concours) → on affiche FLAT, classement intra-
+    // discipline n'aurait pas de sens (DOMINO sur Equifun n'est pas
+    // en compétition avec HAYLEY sur CSO).
+    //
+    // Pour les autres fichiers (imports / crawl predict), on regroupe
+    // par épreuve si dispo, sinon par discipline.
+    if (filename === 'predictions.csv') {
+      renderFlat(rows);
+    } else {
+      const hasEpreuve = rows.some(r => r.epreuve && r.epreuve.trim());
+      const groupKey   = hasEpreuve ? 'epreuve' : 'discipline';
+      const groupVals  = new Set(rows.map(r => (r[groupKey] || '(inconnu)')));
+      if (currentSort === 'proba' && groupVals.size > 1) {
+        renderGrouped(rows, groupKey);
+      } else {
+        renderFlat(rows);
+      }
+    }
+  } catch(err) {
+    empty.textContent = 'Erreur de chargement.';
+    empty.style.display = 'block'; tbl.style.display = 'none';
+  }
+}
+
+function renderFlat(rows) {
+  const tbody = document.getElementById('tbody');
+  const tbl   = document.getElementById('tbl');
+  tbl.style.display = '';
+  // Cache les éventuels groupes précédents
+  const old = document.getElementById('groupContainer');
+  if (old) old.remove();
+  tbody.innerHTML = '';
+
+  // Pour predictions.csv : chaque ligne est une prédiction UNITAIRE et
+  // INDÉPENDANTE — le rang à afficher est `classement_estime` propre
+  // à la ligne (calculé par le predictor à partir de la proba × taille
+  // moyenne d'épreuve), PAS le numéro de ligne dans le tri.
+  // Pour les autres CSV (imports), le rang reste le numéro de ligne
+  // dans le tri global (cas où on a forcé renderFlat).
+  const isUnit = (filename === 'predictions.csv');
+
+  rows.forEach((e, i) => {
+    const rank = isUnit
+      ? (Number(e.classement_estime) || 0)
+      : (e.rank || (i + 1));
+    tbody.appendChild(makeRow(e, rank, /* showRank= */ true, /* withDiscipline= */ true));
+  });
+}
+
+function renderGrouped(rows, groupKey) {
+  const tbl = document.getElementById('tbl');
+  tbl.style.display = 'none';
+
+  let container = document.getElementById('groupContainer');
+  if (container) container.remove();
+  container = document.createElement('div');
+  container.id = 'groupContainer';
+  document.getElementById('empty').before(container);
+
+  // Groupement par épreuve (ou discipline en fallback). Pour
+  // l'affichage, on garde aussi la discipline associée pour la
+  // montrer en sous-titre quand on groupe par épreuve.
+  const groups = {};
+  rows.forEach(r => {
+    const k = r[groupKey] || '(inconnu)';
+    (groups[k] = groups[k] || []).push(r);
+  });
+
+  // Ordre des groupes : par proba moyenne décroissante (le groupe
+  // "le plus prometteur" en premier — visuellement satisfaisant).
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const probaAvg = arr => {
+      const xs = arr.filter(r => !r.is_cold_start && typeof r.proba === 'number').map(r => r.proba);
+      return xs.length ? xs.reduce((s,v)=>s+v,0)/xs.length : -1;
+    };
+    return probaAvg(groups[b]) - probaAvg(groups[a]);
+  });
+
+  sortedKeys.forEach(key => {
+    const list = groups[key].slice().sort((a, b) => {
+      const ca = a.is_cold_start ? 1 : 0;
+      const cb = b.is_cold_start ? 1 : 0;
+      if (ca !== cb) return ca - cb;
+      const pa = (a.proba === '' || a.proba == null) ? -1 : Number(a.proba);
+      const pb = (b.proba === '' || b.proba == null) ? -1 : Number(b.proba);
+      return pb - pa;
+    });
+
+    // Sous-titre : si on groupe par épreuve, ajoute la discipline
+    // (la même pour tout le groupe). Si on groupe par discipline,
+    // pas de sous-titre nécessaire.
+    let subtitle = '';
+    if (groupKey === 'epreuve') {
+      const discs = Array.from(new Set(list.map(r => r.discipline).filter(Boolean)));
+      if (discs.length === 1) subtitle = `<span style="font-size:13px;color:var(--text-muted);font-weight:400;letter-spacing:1px;text-transform:none;margin-left:0.5rem;">— ${esc(discs[0])}</span>`;
+    }
+
+    const block = document.createElement('div');
+    block.className = 'epreuve-block';
+    block.innerHTML = `<div class="epreuve-title">${esc(key)}${subtitle}
+      <span style="float:right;display:flex;gap:0.6rem;align-items:center;">
+        <span style="font-size:13px;color:var(--text-muted);font-weight:400;letter-spacing:1px;">${list.length} entrée(s)</span>
+        <a href="#" onclick="event.stopPropagation();downloadGroup('${esc(key)}', this);return false;"
+           style="font-size:13px;letter-spacing:1.5px;padding:3px 9px;border:1px solid var(--cyan);color:var(--cyan);text-decoration:none;font-family:'Rajdhani',sans-serif;">↓ EXPORTER</a>
+      </span></div>`;
+
+    const t = document.createElement('table');
+    t.className = 'parts-table';
+    // Pas de colonne Discipline dans la table groupée (info dans le titre)
+    t.innerHTML = `
+      <thead><tr>
+        <th style="text-align:center">Rang</th>
+        <th>Date</th>
+        <th>Cheval</th><th>Cavalier</th>
+        <th style="text-align:center">Proba</th>
+        <th>Verdict</th>
+        <th>Modèle</th>
+        <th class="del-btn"></th>
+      </tr></thead>
+      <tbody></tbody>`;
+    const body = t.querySelector('tbody');
+    list.forEach((e, i) => {
+      body.appendChild(makeRow(e, i + 1, true, /* withDiscipline= */ false));
+    });
+    block.appendChild(t);
+    container.appendChild(block);
+  });
+}
+
+function makeRow(e, rank, showRank, withDiscipline = true) {
+  const proba   = (e.proba === '' || e.proba == null) ? '—' : (e.proba + '%');
+  const verdict = e.is_cold_start ? 'cold-start' : (e.verdict || '');
+  const isUnit  = (filename === 'predictions.csv');
+
+  // Rendu visuel des rangs UNIFORME sur toutes les pages :
+  //   - top 3 : médailles 🥇🥈🥉 + couleurs or/argent/bronze (.r1/.r2/.r3)
+  //   - rang 4+ : numéro simple avec couleur text-muted
+  // La logique de calcul du rang diffère (classement_estime pour les
+  // prédictions unitaires, index dans le tri pour les imports groupés),
+  // mais le rendu est identique partout.
+  let rankHtml;
+  if (!showRank || !rank) {
+    rankHtml = '<td style="text-align:center;color:var(--text-muted);font-size:13px;">—</td>';
+  } else {
+    const rankCls  = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+    rankHtml = `<td class="rank ${rankCls}">${rankIcon} ${rank}<span style="font-size:11px;color:var(--text-muted);letter-spacing:1px;">e</span></td>`;
+  }
+
+  const discCol = withDiscipline ? `<td>${esc(e.discipline)}</td>` : '';
+  const hautCol = withDiscipline
+    ? `<td style="text-align:center;font-size:13px;color:var(--text-muted)">${e.hauteur ? esc(e.hauteur) + ' cm' : '—'}</td>`
+    : '';
+
+  // Bouton supprimer : visible UNIQUEMENT sur predictions.csv (auto-géré).
+  // Les imports utilisateur sont read-only depuis l'UI — éditer le CSV
+  // à la main si besoin, ou supprimer le fichier entier depuis /history.
+  const delCol = isUnit
+    ? `<td class="del-btn"><button onclick="event.stopPropagation();delEntry('${esc(e.id)}')" title="Supprime de predictions.csv">×</button></td>`
+    : `<td class="del-btn"></td>`;
+
+  const tr = document.createElement('tr');
+  tr.title = 'Clic — relancer cette prédiction sur la page Prédire';
+  tr.innerHTML = `
+    ${rankHtml}
+    <td style="font-size:13px;color:var(--text-muted)">${fmtDate(e.ts)}</td>
+    <td class="cheval">${esc(e.cheval)}</td>
+    <td class="cavalier">${esc(e.cavalier)}</td>
+    ${discCol}
+    ${hautCol}
+    <td class="proba ${verdictClass(verdict)}">${proba}</td>
+    <td style="font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">${verdictLabel(verdict)}</td>
+    <td style="font-size:12px;letter-spacing:1px;color:var(--text-muted)">${esc(e.model_name)}</td>
+    ${delCol}`;
+  tr.addEventListener('click', () => replayPrediction(e));
+  return tr;
+}
+
+// Génère et déclenche le téléchargement d'un CSV contenant uniquement
+// les rows d'une épreuve donnée (clé = nom de l'épreuve ou discipline).
+// Fait côté client à partir des rows déjà en mémoire — pas d'appel API.
+let allRowsCache = [];   // rempli à chaque load()
+
+function downloadGroup(key, anchor) {
+  if (!allRowsCache || !allRowsCache.length) {
+    anchor.textContent = '— rien à exporter';
+    return;
+  }
+  // Détermine quelle clé filter : epreuve si présent partout, sinon discipline.
+  const hasEpreuve = allRowsCache.some(r => r.epreuve && r.epreuve.trim());
+  const field     = hasEpreuve ? 'epreuve' : 'discipline';
+  const subset    = allRowsCache.filter(r => (r[field] || '(inconnu)') === key);
+  if (!subset.length) return;
+
+  // Colonnes du CSV — identiques à _COLUMNS côté serveur (ordre stable).
+  const cols = ['ts','cheval','cavalier','discipline','epreuve','hauteur',
+                'classement_estime','proba','verdict','is_cold_start',
+                'model_name','snapshot','id'];
+
+  const csvEscape = v => {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n'))
+      return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const lines = [cols.join(',')];
+  subset.forEach(r => lines.push(cols.map(c => csvEscape(r[c])).join(',')));
+
+  // Préfixe BOM utf-8 pour qu'Excel ouvre directement avec accents OK.
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  // Nom de fichier : filename_sans_csv + épreuve sanitize
+  const safe = (filename.replace(/\.csv$/i, '') + '_' + key)
+                  .replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80);
+  a.href = url;
+  a.download = safe + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function replayPrediction(entry) {
+  try {
+    sessionStorage.setItem('equirank.replay', JSON.stringify({
+      cheval:     entry.cheval     || '',
+      cavalier:   entry.cavalier   || '',
+      discipline: entry.discipline || '',
+    }));
+  } catch(e) {}
+  window.location.href = '/';
+}
+
+async function delEntry(id) {
+  try {
+    const r = await fetch('/api/history/entry/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || 'Entrée non trouvée dans predictions.csv (édite ton CSV manuellement si elle est ailleurs).');
+    }
+    toast('Entrée supprimée.', 'ok');
+    load(document.getElementById('searchInput').value.trim());
+  } catch(e) {
+    toast('✗ ' + (e.message || e), 'error');
+  }
+}
+
+load('');
+</script>
+</body>
+</html>
