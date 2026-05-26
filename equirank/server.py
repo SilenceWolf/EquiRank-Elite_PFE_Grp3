@@ -300,18 +300,20 @@ def predict(req: PredictRequest) -> JSONResponse:
 
     payload = result.to_dict()
 
+    # Estimation du classement individuel (rang dans une épreuve
+    # typique de cette discipline). Le modèle PFE ne prédit pas un
+    # rang direct, on l'inverse depuis la proba — voir
+    # EquirankPredictor.estimateRank() pour la formule.
+    rank = getDefaultPredictor().estimateRank(
+        payload.get('proba', 0), req.discipline,
+    )
+    payload['classement_estime'] = int(rank)
+
     # Journalise la prédiction réussie dans l'historique persistant
     # (data/prediction_history.jsonl). Permet à l'utilisateur de
     # consulter et exporter ses précédentes prédictions via /history.
     try:
         active = snapshots.getActiveSnapshot()
-        # Estimation du classement individuel (rang dans une épreuve
-        # typique de cette discipline). Le modèle PFE ne prédit pas un
-        # rang direct, on l'inverse depuis la proba — voir
-        # EquirankPredictor.estimateRank() pour la formule.
-        rank = getDefaultPredictor().estimateRank(
-            payload.get('proba', 0), req.discipline,
-        )
         prediction_history.addEntry(
             cheval            = req.cheval,
             cavalier          = req.cavalier,

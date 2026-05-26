@@ -53,19 +53,23 @@ _MODEL_PRIORITY = ('LightGBM', 'XGBoost', 'RandomForest', 'DecisionTree', 'Logis
 @dataclass
 class PredictionResult:
     """Sortie sérialisable de predictor.predict()."""
-    proba:             float          # ∈ [0, 1] — probabilité du résultat positif
-    cheval_race:       str            # plus proche de "race" disponible (robe au format dataset PFE)
-    cheval_age:        int            # NOTE : pas dans dataset_brut_v2 → expérience cumulée à la place
-    cheval_victoires:  int
-    cheval_courses:    int
-    jockey_victoires:  int
-    jockey_courses:    int
-    duo_victoires:     int
-    duo_courses:       int
-    forme:             str
-    discipline:        str
-    model_name:        str
-    is_cold_start:     bool = False     # cheval et/ou cavalier absents de la base
+    proba:                 float       # ∈ [0, 1] — probabilité du résultat positif
+    cheval_race:           str         # plus proche de "race" disponible (robe au format dataset PFE)
+    cheval_age:            int         # NOTE : pas dans dataset_brut_v2 → expérience cumulée à la place
+    cheval_victoires:      int
+    cheval_courses:        int
+    jockey_victoires:      int
+    jockey_courses:        int
+    duo_victoires:         int
+    duo_courses:           int
+    forme:                 str
+    discipline:            str
+    model_name:            str
+    cheval_clt_moyen:      float | None = None
+    cavalier_clt_moyen:    float | None = None
+    cheval_placements:     list[dict[str, Any]] | None = None
+    cavalier_placements:   list[dict[str, Any]] | None = None
+    is_cold_start:         bool = False     # cheval et/ou cavalier absents de la base
 
     def to_dict(self) -> dict[str, Any]:
         # On floor à l'unité côté entiers pour matcher le JSON attendu
@@ -83,6 +87,10 @@ class PredictionResult:
             'forme':            self.forme,
             'discipline':       self.discipline,
             'model_name':       self.model_name,
+            'cheval_clt_moyen':    (round(self.cheval_clt_moyen, 1)   if self.cheval_clt_moyen   is not None else None),
+            'cavalier_clt_moyen':  (round(self.cavalier_clt_moyen, 1) if self.cavalier_clt_moyen is not None else None),
+            'cheval_placements':   self.cheval_placements   or [],
+            'cavalier_placements': self.cavalier_placements or [],
             'is_cold_start':    bool(self.is_cold_start),
         }
 
@@ -391,20 +399,29 @@ class EquirankPredictor:
 
         forme = self._composeForme(chevalRows, cavalierRows, duoRows)
 
+        chevalCltMoyen   = self._meanClassement(chevalRows)
+        cavalierCltMoyen = self._meanClassement(cavalierRows)
+        chevalPlacements   = self._placementsList(chevalRows)
+        cavalierPlacements = self._placementsList(cavalierRows)
+
         return PredictionResult(
-            proba             = proba,
-            cheval_race       = chevalRace,
-            cheval_age        = chevalAge,
-            cheval_victoires  = chevalVictoires,
-            cheval_courses    = chevalCourses,
-            jockey_victoires  = cavalierVictoires,
-            jockey_courses    = cavalierCourses,
-            duo_victoires     = duoVictoires,
-            duo_courses       = duoCourses,
-            forme             = forme,
-            discipline        = discKey,
-            model_name        = self._model_name,
-            is_cold_start     = isColdStart,
+            proba                = proba,
+            cheval_race          = chevalRace,
+            cheval_age           = chevalAge,
+            cheval_victoires     = chevalVictoires,
+            cheval_courses       = chevalCourses,
+            jockey_victoires     = cavalierVictoires,
+            jockey_courses       = cavalierCourses,
+            duo_victoires        = duoVictoires,
+            duo_courses          = duoCourses,
+            forme                = forme,
+            discipline           = discKey,
+            model_name           = self._model_name,
+            cheval_clt_moyen     = chevalCltMoyen,
+            cavalier_clt_moyen   = cavalierCltMoyen,
+            cheval_placements    = chevalPlacements,
+            cavalier_placements  = cavalierPlacements,
+            is_cold_start        = isColdStart,
         )
 
     # ──────────────────────────────────────────────
@@ -552,6 +569,44 @@ class EquirankPredictor:
             return ''
         m = s.mode()
         return str(m.iloc[0]) if not m.empty else ''
+
+    @staticmethod
+    def _meanClassement(rows: pd.DataFrame) -> float | None:
+        """Classement moyen sur l'historique (None si pas exploitable)."""
+        if rows.empty or 'classement' not in rows.columns:
+            return None
+        vals = pd.to_numeric(rows['classement'], errors = 'coerce').dropna()
+        if vals.empty:
+            return None
+        return float(vals.mean())
+
+    @staticmethod
+    def _placementsList(rows: pd.DataFrame, limit: int = 30) -> list[dict[str, Any]]:
+        """
+        Renvoie l'historique des placements pour le détail dépliable côté UI.
+        On garde les `limit` plus récents (ordre d'apparition dans le dataset).
+        """
+        if rows.empty:
+            return []
+        sub = rows.tail(limit)
+        out: list[dict[str, Any]] = []
+        for _, r in sub.iterrows():
+            clt = pd.to_numeric(r.get('classement'), errors = 'coerce')
+            hauteur = r.get('hauteur_cm')
+            try:
+                hauteurStr = f"{int(hauteur)} cm" if hauteur and not pd.isna(hauteur) else ''
+            except (TypeError, ValueError):
+                hauteurStr = ''
+            out.append({
+                'discipline':  str(r.get('discipline_famille') or ''),
+                'niveau':      str(r.get('niveau_epreuve') or ''),
+                'hauteur':     hauteurStr,
+                'clt':         (int(clt) if not pd.isna(clt) else None),
+                'participants': (int(r.get('nombre_participants'))
+                                 if r.get('nombre_participants') and not pd.isna(r.get('nombre_participants'))
+                                 else None),
+            })
+        return out
 
     @staticmethod
     def _composeForme(
