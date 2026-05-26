@@ -89,7 +89,7 @@ section { position: relative; z-index: 1; padding: clamp(3rem, 8vw, 6rem) clamp(
 .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px, 6vw, 56px); letter-spacing: 4px; color: var(--text); margin-bottom: 1rem; }
 .section-title span { color: var(--gold); }
 .section-line { width: 60px; height: 1px; background: var(--gold); margin-bottom: 2rem; }
-#predictor { max-width: 860px; margin: 0 auto; }
+#predictor { max-width: 1180px; margin: 0 auto; }
 .predictor-header { text-align: center; margin-bottom: 3rem; }
 .predictor-header .section-line { margin: 0 auto 2rem; }
 .pred-card { background: var(--bg2); border: 1px solid var(--gold-border); padding: clamp(1.5rem, 4vw, 2.5rem); position: relative; overflow: hidden; }
@@ -150,10 +150,44 @@ section { position: relative; z-index: 1; padding: clamp(3rem, 8vw, 6rem) clamp(
 .res-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--text); }
 .res-stat-val.gold { color: var(--gold); }
 .res-stat-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-.compat-pips { display: flex; gap: 5px; margin-top: 6px; }
-.pip { width: 10px; height: 10px; border: 1px solid rgba(245,195,65,0.3); }
-.pip.on { background: var(--gold); border-color: var(--gold); }
 .model-tag { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); margin-top: 6px; }
+.res-placements { border: 1px solid var(--gold-border); border-top: none; }
+.placements-toggle { width: 100%; padding: 0.9rem 1.5rem; background: transparent; border: none; color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+.placements-toggle:hover { background: rgba(245,195,65,0.06); }
+.placements-toggle .caret { transition: transform 0.2s; }
+.placements-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.placements-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--gold-border); }
+.placements-panel[hidden] { display: none; }
+.placements-col { padding: 1rem 1.25rem; border-right: 1px solid var(--gold-border); min-width: 0; overflow-x: auto; }
+.placements-col:last-child { border-right: none; }
+.placements-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.placements-title span { color: var(--text); }
+.placements-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Montserrat', sans-serif; table-layout: fixed; }
+.placements-table col.col-disc { width: 24%; }
+.placements-table col.col-niv  { width: 28%; }
+.placements-table col.col-haut { width: 16%; }
+.placements-table col.col-clt  { width: 18%; }
+.placements-table col.col-part { width: 14%; }
+.placements-table th { text-align: left; font-weight: 500; color: var(--text-muted); padding: 6px 10px; border-bottom: 1px solid var(--gold-border); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.placements-table td { padding: 6px 10px; border-bottom: 1px solid rgba(245,195,65,0.07); color: var(--text); overflow-wrap: anywhere; word-break: break-word; }
+.placements-table td.num { text-align: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.placements-table td.clt { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--text-muted); text-align: center; }
+.placements-table td.clt.r1, .placements-table td.clt.r2, .placements-table td.clt.r3 { font-size: 18px; }
+.placements-table td.clt.r1 { color: var(--gold); }
+.placements-table td.clt.r2 { color: #C7C7C7; }
+.placements-table td.clt.r3 { color: #CD8A4F; }
+.placements-table td.clt .clt-suffix { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; margin-left: 1px; }
+.rank-medal { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+.rank-medal.r1 { color: var(--gold); }
+.rank-medal.r2 { color: #C7C7C7; }
+.rank-medal.r3 { color: #CD8A4F; }
+.rank-medal .rank-suffix { font-size: 12px; color: var(--text-muted); letter-spacing: 1.5px; margin-left: 2px; }
+.placements-empty { color: var(--text-muted); font-size: 13px; padding: 6px 8px; }
+@media (max-width: 850px) {
+  .placements-panel { grid-template-columns: 1fr; }
+  .placements-col { border-right: none; border-bottom: 1px solid var(--gold-border); }
+  .placements-col:last-child { border-bottom: none; }
+}
 #how { background: var(--bg2); }
 .how-inner { max-width: 900px; margin: 0 auto; }
 .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; }
@@ -252,7 +286,7 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
        prédictions (snapshot default OU snapshot d'un crawl spécifique). -->
   <div id="activeSnapBar" style="
         display:none;
-        max-width:860px; margin:0 auto 1rem;
+        max-width:1180px; margin:0 auto 1rem;
         padding:0.6rem 1rem;
         background: var(--bg2);
         border: 1px solid var(--gold-border);
@@ -329,13 +363,38 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
           <div class="res-stat-sub" id="r-wins-sub">—</div>
         </div>
         <div class="res-stat">
-          <div class="res-stat-label">Compatibilité duo</div>
-          <div class="res-stat-val gold" id="r-compat">—</div>
-          <div class="compat-pips" id="r-pips"></div>
+          <div class="res-stat-label">Clt moyen cheval</div>
+          <div class="res-stat-val gold" id="r-clt-cheval">—</div>
+          <div class="res-stat-sub" id="r-clt-cheval-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Clt moyen cavalier</div>
+          <div class="res-stat-val gold" id="r-clt-cavalier">—</div>
+          <div class="res-stat-sub" id="r-clt-cavalier-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Rang prédit</div>
+          <div class="res-stat-val gold" id="r-rank">—</div>
         </div>
         <div class="res-stat" style="grid-column: 1 / -1; border-right: none;">
           <div class="res-stat-label">Forme récente</div>
           <div style="font-size:14px;color:var(--text-muted);margin-top:4px;font-family:'Montserrat',sans-serif;font-weight:300;line-height:1.6;" id="r-forme">—</div>
+        </div>
+      </div>
+      <div class="res-placements">
+        <button type="button" class="placements-toggle" id="r-placements-btn" aria-expanded="false">
+          <span>Voir le détail des placements</span>
+          <span class="caret">▾</span>
+        </button>
+        <div class="placements-panel" id="r-placements-panel" hidden>
+          <div class="placements-col">
+            <div class="placements-title">Cheval — <span id="r-placements-cheval-name">—</span></div>
+            <table class="placements-table" id="r-placements-cheval"></table>
+          </div>
+          <div class="placements-col">
+            <div class="placements-title">Cavalier — <span id="r-placements-cavalier-name">—</span></div>
+            <table class="placements-table" id="r-placements-cavalier"></table>
+          </div>
         </div>
       </div>
     </div>
@@ -385,11 +444,6 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
         <div class="feat-icon">◈</div>
         <div class="feat-title">Profil cavalier</div>
         <div class="feat-text">Taux de réussite cumulé, nombre de sorties, expérience par discipline.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-icon">◈</div>
-        <div class="feat-title">Compatibilité duo</div>
-        <div class="feat-text">Score de synergie basé sur l'historique commun cavalier / cheval.</div>
       </div>
       <div class="feat">
         <div class="feat-icon">◈</div>
@@ -579,7 +633,6 @@ async function predict() {
 
 function render(horse, jockey, disc, dist, s) {
   const proba  = Math.round(s.proba);
-  const compat = s.duo_courses > 0 ? Math.round(s.duo_victoires / s.duo_courses * 100) : 0;
   document.getElementById('r-duo').innerHTML  = horse + ' <span>×</span> ' + jockey;
   document.getElementById('r-meta').textContent = disc + (dist ? ' — ' + dist + ' cm' : '');
   document.getElementById('r-disc').textContent = disc;
@@ -591,16 +644,34 @@ function render(horse, jockey, disc, dist, s) {
   document.getElementById('r-jockey-sub').textContent = s.jockey_victoires + ' réussites / ' + s.jockey_courses + ' sorties';
   document.getElementById('r-wins').textContent = s.cheval_victoires;
   document.getElementById('r-wins-sub').textContent = (s.cheval_courses ? Math.round(s.cheval_victoires/s.cheval_courses*100) : 0) + '% de réussite';
-  document.getElementById('r-compat').textContent = compat + '%';
-  document.getElementById('r-forme').textContent = s.forme;
-  const pips = document.getElementById('r-pips');
-  pips.innerHTML = '';
-  const filled = Math.round(compat / 10);
-  for(let i = 0; i < 10; i++) {
-    const d = document.createElement('div');
-    d.className = 'pip' + (i < filled ? ' on' : '');
-    pips.appendChild(d);
+
+  const fmtClt = (v) => (v === null || v === undefined || v === '' || isNaN(v)) ? '—' : Number(v).toFixed(1);
+  document.getElementById('r-clt-cheval').textContent   = fmtClt(s.cheval_clt_moyen);
+  document.getElementById('r-clt-cheval-sub').textContent   = s.cheval_courses   ? ('sur ' + s.cheval_courses   + ' sorties') : 'aucune sortie';
+  document.getElementById('r-clt-cavalier').textContent = fmtClt(s.cavalier_clt_moyen);
+  document.getElementById('r-clt-cavalier-sub').textContent = s.jockey_courses   ? ('sur ' + s.jockey_courses   + ' sorties') : 'aucune sortie';
+  const rEl = document.getElementById('r-rank');
+  const rank = s.classement_estime;
+  if (rank && rank > 0) {
+    const cls  = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+    const icon = rank === 1 ? '🥇 ' : rank === 2 ? '🥈 ' : rank === 3 ? '🥉 ' : '';
+    rEl.className = 'res-stat-val rank-medal ' + cls;
+    rEl.innerHTML = icon + rank + '<span class="rank-suffix">ᵉ</span>';
+  } else {
+    rEl.className = 'res-stat-val gold';
+    rEl.textContent = '—';
   }
+
+  renderPlacements('r-placements-cheval',   s.cheval_placements   || []);
+  renderPlacements('r-placements-cavalier', s.cavalier_placements || []);
+  document.getElementById('r-placements-cheval-name').textContent   = horse;
+  document.getElementById('r-placements-cavalier-name').textContent = jockey;
+  const panel = document.getElementById('r-placements-panel');
+  const btn   = document.getElementById('r-placements-btn');
+  panel.hidden = true;
+  btn.setAttribute('aria-expanded', 'false');
+
+  document.getElementById('r-forme').textContent = s.forme;
   const verd = document.getElementById('r-verdict');
   if (proba >= 60) { verd.textContent = '★ Favori solide'; verd.className = 'res-verdict high'; }
   else if (proba >= 35) { verd.textContent = '◆ Outsider crédible'; verd.className = 'res-verdict mid'; }
@@ -609,6 +680,38 @@ function render(horse, jockey, disc, dist, s) {
   setTimeout(() => { document.getElementById('r-bar').style.width = proba + '%'; }, 80);
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+function renderPlacements(tableId, rows) {
+  const t = document.getElementById(tableId);
+  if (!t) return;
+  if (!rows.length) {
+    t.innerHTML = '<tr><td class="placements-empty">Aucun historique exploitable.</td></tr>';
+    return;
+  }
+  const cols = '<colgroup><col class="col-disc"><col class="col-niv"><col class="col-haut"><col class="col-clt"><col class="col-part"></colgroup>';
+  const head = '<thead><tr><th>Discipline</th><th>Niveau</th><th>Haut.</th><th>Clt</th><th>Part.</th></tr></thead>';
+  const body = rows.map(r => {
+    let cltHtml;
+    if (r.clt === null || r.clt === undefined) {
+      cltHtml = '<td class="clt">—</td>';
+    } else {
+      const cls  = r.clt === 1 ? 'r1' : r.clt === 2 ? 'r2' : r.clt === 3 ? 'r3' : '';
+      const icon = r.clt === 1 ? '🥇 ' : r.clt === 2 ? '🥈 ' : r.clt === 3 ? '🥉 ' : '';
+      cltHtml = `<td class="clt ${cls}">${icon}${r.clt}<span class="clt-suffix">ᵉ</span></td>`;
+    }
+    return `<tr><td>${r.discipline || '—'}</td><td>${r.niveau || '—'}</td><td class="num">${r.hauteur || '—'}</td>${cltHtml}<td class="num">${r.participants ?? '—'}</td></tr>`;
+  }).join('');
+  t.innerHTML = cols + head + '<tbody>' + body + '</tbody>';
+}
+
+document.getElementById('r-placements-btn').addEventListener('click', () => {
+  const panel = document.getElementById('r-placements-panel');
+  const btn   = document.getElementById('r-placements-btn');
+  const open  = panel.hidden;
+  panel.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.querySelector('span').textContent = open ? 'Masquer le détail des placements' : 'Voir le détail des placements';
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') predict();
