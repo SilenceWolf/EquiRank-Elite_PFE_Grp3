@@ -67,15 +67,19 @@ class PredictionResult:
     model_name:            str
     cheval_clt_moyen:      float | None = None
     cavalier_clt_moyen:    float | None = None
+    cheval_clt_scope:      str = ''        # libellé du périmètre (ex: "CSO 110 cm — Club")
+    cavalier_clt_scope:    str = ''
+    cheval_clt_n:          int = 0         # nb de sorties dans le périmètre
+    cavalier_clt_n:        int = 0
     cheval_placements:     list[dict[str, Any]] | None = None
     cavalier_placements:   list[dict[str, Any]] | None = None
     is_cold_start:         bool = False     # cheval et/ou cavalier absents de la base
 
     def to_dict(self) -> dict[str, Any]:
-        # On floor à l'unité côté entiers pour matcher le JSON attendu
-        # par le JS de la page Equirank (Math.round(proba), etc.).
+        # Proba à 2 décimales (99.96 vs 99.92 sont distinctes maintenant
+        # qu'on utilise le LightGBM brut sans calibration sigmoïde).
         return {
-            'proba':            int(round(self.proba * 100)),
+            'proba':            round(self.proba * 100, 2),
             'cheval_race':      self.cheval_race,
             'cheval_age':       int(self.cheval_age),
             'cheval_victoires': int(self.cheval_victoires),
@@ -89,6 +93,10 @@ class PredictionResult:
             'model_name':       self.model_name,
             'cheval_clt_moyen':    (round(self.cheval_clt_moyen, 1)   if self.cheval_clt_moyen   is not None else None),
             'cavalier_clt_moyen':  (round(self.cavalier_clt_moyen, 1) if self.cavalier_clt_moyen is not None else None),
+            'cheval_clt_scope':    self.cheval_clt_scope,
+            'cavalier_clt_scope':  self.cavalier_clt_scope,
+            'cheval_clt_n':        int(self.cheval_clt_n),
+            'cavalier_clt_n':      int(self.cavalier_clt_n),
             'cheval_placements':   self.cheval_placements   or [],
             'cavalier_placements': self.cavalier_placements or [],
             'is_cold_start':    bool(self.is_cold_start),
@@ -223,6 +231,22 @@ class EquirankPredictor:
         rank = round((100 - p) / 100 * (n_avg - 1)) + 1
         return max(1, min(rank, n_avg))
 
+    def listNiveaux(self, discipline: str = '') -> list[str]:
+        """
+        Niveaux d'épreuve présents dans le dataset, triés par fréquence
+        décroissante (plus utiles à proposer en premier dans un <select>).
+        Si `discipline` est fournie, on restreint aux niveaux effectivement
+        vus dans cette discipline — évite de proposer "Poussin" en CSO 130.
+        """
+        self._load()
+        df = self._df
+        if 'niveau_epreuve' not in df.columns:
+            return []
+        sub = df if not discipline else df[df['discipline_famille'] == discipline]
+        if sub.empty:
+            return []
+        return sub['niveau_epreuve'].dropna().value_counts().index.tolist()
+
     def listDistances(self, discipline: str = '') -> list[int]:
         """
         Hauteurs (en cm) effectivement vues dans le dataset pour la
@@ -309,6 +333,8 @@ class EquirankPredictor:
         cheval:        str,
         cavalier:      str,
         discipline:    str,
+        niveau:        str = '',
+        hauteur:       str = '',
         allow_unknown: bool = False,
     ) -> PredictionResult | dict[str, str]:
         """
@@ -369,7 +395,15 @@ class EquirankPredictor:
             (self._df['_cavalier_key'] == cavalierKey)
         ]
 
-        features = self._buildFeatureVector(chevalRows, cavalierRows, discKey)
+        try:
+            hauteurUserInt = int(hauteur) if hauteur and str(hauteur).strip() else None
+        except (TypeError, ValueError):
+            hauteurUserInt = None
+        features = self._buildFeatureVector(
+            chevalRows, cavalierRows, discKey,
+            niveau_user  = (niveau or '').strip(),
+            hauteur_user = hauteurUserInt,
+        )
 
         with self._lock:
             try:
@@ -399,8 +433,16 @@ class EquirankPredictor:
 
         forme = self._composeForme(chevalRows, cavalierRows, duoRows)
 
-        chevalCltMoyen   = self._meanClassement(chevalRows)
-        cavalierCltMoyen = self._meanClassement(cavalierRows)
+        # Le rang doit refléter le triplet exact (discipline, hauteur, niveau)
+        # demandé — pas une moyenne globale qui mélangerait CSO 90 et CSO 130.
+        # Filtre cascade : on garde le sous-ensemble le PLUS spécifique qui
+        # a encore au moins 3 sorties (en dessous c'est statistiquement
+        # douteux). Si rien ne marche on retombe sur la moyenne globale.
+        chevalScope   = self._narrowScope(chevalRows,   discKey, hauteurUserInt, (niveau or '').strip() or None)
+        cavalierScope = self._narrowScope(cavalierRows, discKey, hauteurUserInt, (niveau or '').strip() or None)
+
+        chevalCltMoyen   = self._meanClassement(chevalScope['rows'])
+        cavalierCltMoyen = self._meanClassement(cavalierScope['rows'])
         chevalPlacements   = self._placementsList(chevalRows)
         cavalierPlacements = self._placementsList(cavalierRows)
 
@@ -419,6 +461,10 @@ class EquirankPredictor:
             model_name           = self._model_name,
             cheval_clt_moyen     = chevalCltMoyen,
             cavalier_clt_moyen   = cavalierCltMoyen,
+            cheval_clt_scope     = chevalScope['scope_label'],
+            cavalier_clt_scope   = cavalierScope['scope_label'],
+            cheval_clt_n         = int(len(chevalScope['rows'])),
+            cavalier_clt_n       = int(len(cavalierScope['rows'])),
             cheval_placements    = chevalPlacements,
             cavalier_placements  = cavalierPlacements,
             is_cold_start        = isColdStart,
@@ -432,6 +478,8 @@ class EquirankPredictor:
         chevalRows:   pd.DataFrame,
         cavalierRows: pd.DataFrame,
         disc:         str,
+        niveau_user:  str = '',
+        hauteur_user: int | None = None,
     ) -> pd.DataFrame:
         """
         Reconstruit une row au format `feature_cols` du modèle. On agrège
@@ -441,6 +489,12 @@ class EquirankPredictor:
             historique — ex : la robe ne change pas, la taille non plus)
           - numérique  → moyenne ou dernière valeur (pour les win_rate
             cumulés on prend la moyenne qui est plus stable que `.iloc[-1]`)
+
+        Quand `hauteur_user` et/ou `niveau_user` sont fournis, on
+        RESTREINT aussi les historiques de win_rate à ce sous-ensemble
+        — sinon toutes les variantes (CSO 80 Niveau1, CSO 80 National,
+        CSO 110 Club…) donnent la même proba puisqu'elles partagent
+        toutes le même horse_win_rate global.
         """
 
         # Filtre l'historique cheval sur la même discipline si possible,
@@ -462,21 +516,43 @@ class EquirankPredictor:
             cavalierDisc = cavalierRows[cavalierRows['discipline_famille'] == disc]
             cavalierHist = cavalierDisc if len(cavalierDisc) >= 2 else cavalierRows
 
+        # Sous-ensembles "spécifiques au combo" pour les win_rates.
+        # On garde la version la plus précise qui a encore ≥ 1 row.
+        def _narrow(df: pd.DataFrame) -> pd.DataFrame:
+            if df.empty: return df
+            sub = df
+            if hauteur_user is not None and 'hauteur_cm' in df.columns:
+                m = pd.to_numeric(df['hauteur_cm'], errors='coerce') == hauteur_user
+                if m.sum() >= 1: sub = df[m]
+            if niveau_user and 'niveau_epreuve' in sub.columns:
+                m = sub['niveau_epreuve'] == niveau_user
+                if m.sum() >= 1: sub = sub[m]
+            return sub
+        chevalNarrow   = _narrow(chevalRows)   if not chevalRows.empty   else chevalRows
+        cavalierNarrow = _narrow(cavalierRows) if not cavalierRows.empty else cavalierRows
+
         # Valeurs canoniques du cheval (la dernière row vue est souvent
         # la plus à jour ; pour les catégorielles on prend le mode).
         sexe   = self._safeMode(chevalHist['sexe_cheval'])
         robe   = self._safeMode(chevalHist['robe_cheval'])
         taille = self._safeMode(chevalHist['taille_cheval'])
 
-        # Valeurs canoniques de l'épreuve — on extrapole depuis les
-        # rows passées du cheval dans cette discipline ; à défaut on
-        # prend la médiane globale du dataset (cf. SimpleImputer
-        # entraîné sur la base complète).
-        hauteur  = float(chevalHist['hauteur_cm'].median()
-                         if not chevalHist['hauteur_cm'].isna().all()
-                         else self._df['hauteur_cm'].median())
-        niveau   = self._safeMode(chevalHist['niveau_epreuve']) or \
-                   self._safeMode(self._df['niveau_epreuve'])
+        # Hauteur de l'épreuve : si l'utilisateur en a fourni une, on la
+        # respecte (case "et si on engageait sur 110 cm ?"). Sinon
+        # médiane historique du cheval dans cette discipline.
+        if hauteur_user is not None:
+            hauteur = float(hauteur_user)
+        else:
+            hauteur = float(chevalHist['hauteur_cm'].median()
+                            if not chevalHist['hauteur_cm'].isna().all()
+                            else self._df['hauteur_cm'].median())
+        # Si l'utilisateur a fourni un niveau (Club, Elite, National, etc.)
+        # on le respecte — sinon on retombe sur le mode historique du cheval.
+        if niveau_user:
+            niveau = niveau_user
+        else:
+            niveau = self._safeMode(chevalHist['niveau_epreuve']) or \
+                     self._safeMode(self._df['niveau_epreuve'])
         typeEpr  = self._safeMode(chevalHist['type_epreuve']) or \
                    self._safeMode(self._df['type_epreuve'])
         isEquipe = int(round(chevalHist['is_equipe'].mean()
@@ -488,18 +564,28 @@ class EquirankPredictor:
                          if not chevalHist['niveau_num'].isna().all()
                          else self._df['niveau_num'].mean())
 
-        # Win-rates cumulés — moyenne sur l'historique. Pour un cheval
-        # ou cavalier inconnu, on retombe sur la baseline 0.3 utilisée
-        # par adapt_dataset_v2 (`rolling_winrate` initialisé à 0.3).
-        horseWR  = float(chevalRows['horse_win_rate'].mean())   if not chevalRows.empty   else 0.3
-        horsePr  = int(chevalRows['horse_participations'].max() or 0) if not chevalRows.empty else 0
-        riderWR  = float(cavalierRows['rider_win_rate'].mean()) if not cavalierRows.empty else 0.3
-        riderPr  = int(cavalierRows['rider_participations'].max() or 0) if not cavalierRows.empty else 0
-        clubWR   = float(chevalRows['club_win_rate'].mean()) \
-                   if (not chevalRows.empty and not chevalRows['club_win_rate'].isna().all()) else 0.3
+        # Win-rates SPÉCIFIQUES AU COMBO si hauteur/niveau fournis.
+        # Sinon moyenne globale du cheval. Pour cheval inconnu, baseline 0.3
+        # (= valeur initiale de rolling_winrate dans adapt_dataset_v2).
+        horseWR  = float(chevalNarrow['horse_win_rate'].mean())     if not chevalNarrow.empty   else 0.3
+        horsePr  = int(chevalNarrow['horse_participations'].max() or 0) if not chevalNarrow.empty else 0
+        riderWR  = float(cavalierNarrow['rider_win_rate'].mean())   if not cavalierNarrow.empty else 0.3
+        riderPr  = int(cavalierNarrow['rider_participations'].max() or 0) if not cavalierNarrow.empty else 0
+        clubWR   = float(chevalNarrow['club_win_rate'].mean()) \
+                   if (not chevalNarrow.empty and not chevalNarrow['club_win_rate'].isna().all()) else 0.3
 
         synergy   = horseWR * riderWR
         expRatio  = horsePr / (hauteur / 10 + 1) if hauteur else horsePr
+
+        # Features d'interaction — DOIVENT être calculées avec les valeurs
+        # finales de hauteur/niveau/win_rate (cf. adapt_dataset_v2 même formule).
+        # Sinon le modèle reçoit des 0 / valeurs incohérentes → prédictions
+        # nulles ou identiques entre combos.
+        horseWrXNiveau  = horseWR * niveauN
+        horseWrXHauteur = horseWR * (hauteur / 100) if hauteur else 0.0
+        riderWrXNiveau  = riderWR * niveauN
+        riderWrXHauteur = riderWR * (hauteur / 100) if hauteur else 0.0
+        synergyXNiveau  = synergy * niveauN
         ptsQ      = float(chevalRows['pts_qualification'].mean()) \
                     if (not chevalRows.empty and not chevalRows['pts_qualification'].isna().all()) else 0.0
 
@@ -518,6 +604,11 @@ class EquirankPredictor:
             'taille_cheval':         taille or self._safeMode(self._df['taille_cheval']),
             'discipline_famille':    disc,
             'hauteur_cm':            hauteur,
+            'horse_wr_x_niveau':     horseWrXNiveau,
+            'horse_wr_x_hauteur':    horseWrXHauteur,
+            'rider_wr_x_niveau':     riderWrXNiveau,
+            'rider_wr_x_hauteur':    riderWrXHauteur,
+            'synergy_x_niveau':      synergyXNiveau,
             'niveau_epreuve':        niveau,
             'type_epreuve':          typeEpr,
             'is_equipe':             isEquipe,
@@ -569,6 +660,51 @@ class EquirankPredictor:
             return ''
         m = s.mode()
         return str(m.iloc[0]) if not m.empty else ''
+
+    @staticmethod
+    def _narrowScope(
+        rows:       pd.DataFrame,
+        discipline: str,
+        hauteur:    int | None,
+        niveau:     str | None,
+        min_rows:   int = 3,
+    ) -> dict[str, Any]:
+        """
+        Restreint l'historique au triplet le plus spécifique (discipline,
+        hauteur, niveau) qui a encore au moins `min_rows` sorties. Cascade
+        de fallback du + précis au + large.
+
+        Retourne {'rows': DataFrame filtré, 'scope_label': str} où le label
+        indique sur quoi on s'est ancré (utile pour l'UI).
+        """
+        if rows.empty:
+            return {'rows': rows, 'scope_label': 'aucune sortie'}
+
+        # Ordre du + spécifique au + large
+        candidates: list[tuple[str, pd.Series]] = []
+        base = rows['discipline_famille'] == discipline
+        if hauteur is not None and 'hauteur_cm' in rows.columns:
+            hMask = base & (pd.to_numeric(rows['hauteur_cm'], errors='coerce') == hauteur)
+            if niveau and 'niveau_epreuve' in rows.columns:
+                candidates.append((f"{discipline} {hauteur} cm — {niveau}", hMask & (rows['niveau_epreuve'] == niveau)))
+            candidates.append((f"{discipline} {hauteur} cm", hMask))
+        if niveau and 'niveau_epreuve' in rows.columns:
+            candidates.append((f"{discipline} — {niveau}", base & (rows['niveau_epreuve'] == niveau)))
+        candidates.append((discipline, base))
+        candidates.append(('toutes disciplines', pd.Series([True] * len(rows), index=rows.index)))
+
+        for label, mask in candidates:
+            sub = rows[mask]
+            if len(sub) >= min_rows:
+                return {'rows': sub, 'scope_label': label}
+
+        # Aucun seuil atteint → on garde le moins large (broadest) qui a
+        # au moins UNE ligne, sinon le DataFrame vide.
+        for label, mask in reversed(candidates):
+            sub = rows[mask]
+            if len(sub) >= 1:
+                return {'rows': sub, 'scope_label': label + ' (peu de données)'}
+        return {'rows': rows.iloc[0:0], 'scope_label': 'aucune sortie'}
 
     @staticmethod
     def _meanClassement(rows: pd.DataFrame) -> float | None:
@@ -641,6 +777,220 @@ class EquirankPredictor:
     # ──────────────────────────────────────────────
     # Prédiction batch (concours futurs)
     # ──────────────────────────────────────────────
+    def predictAllDisciplines(
+        self,
+        cheval:   str,
+        cavalier: str,
+    ) -> list[dict[str, Any]]:
+        """
+        Prédit le résultat du duo sur CHAQUE discipline où le cheval OU
+        le cavalier a au moins une participation historique.
+
+        Une seule proba globale agrégée à travers toutes les disciplines
+        est trompeuse : un duo peut être top sur CSO 100 et flop sur
+        CSO 130. On déroule donc une prédiction par discipline et on
+        ancre le rang sur la moyenne historique du duo DANS cette
+        discipline précise (pas globale).
+
+        Retourne une liste de dicts triés par proba descendante,
+        chaque dict contenant : discipline, proba (0-100), rang_estime,
+        cheval_clt_moyen (sur cette discipline), cavalier_clt_moyen
+        (idem), nb_runs_cheval, nb_runs_cavalier.
+        """
+        self._load()
+
+        chevalKey   = (cheval   or '').strip().upper()
+        cavalierKey = (cavalier or '').strip().upper()
+        if not chevalKey and not cavalierKey:
+            return []
+
+        chevalRows   = self._df[self._df['_cheval_key']   == chevalKey]   if chevalKey   else self._df.iloc[0:0]
+        cavalierRows = self._df[self._df['_cavalier_key'] == cavalierKey] if cavalierKey else self._df.iloc[0:0]
+
+        # Disciplines où l'un OU l'autre a au moins une sortie connue
+        discFromCheval   = set(chevalRows['discipline_famille'].dropna().unique().tolist())
+        discFromCavalier = set(cavalierRows['discipline_famille'].dropna().unique().tolist())
+        disciplines = sorted(discFromCheval | discFromCavalier)
+        if not disciplines:
+            return []
+
+        out: list[dict[str, Any]] = []
+        for disc in disciplines:
+            res = self.predict(cheval = cheval, cavalier = cavalier, discipline = disc)
+            if isinstance(res, dict):       # erreur — ignorer cette discipline
+                continue
+
+            # Moyennes historiques RESTREINTES à cette discipline
+            chDisc = chevalRows[chevalRows['discipline_famille'] == disc]
+            cvDisc = cavalierRows[cavalierRows['discipline_famille'] == disc]
+            chMoy = self._meanClassement(chDisc)
+            cvMoy = self._meanClassement(cvDisc)
+
+            # Rang estimé blendé sur l'historique de CETTE discipline
+            d   = res.to_dict()
+            p   = d['proba']
+            raw = self.estimateRank(p, disc)
+            moys = [m for m in (chMoy, cvMoy) if m is not None]
+            if moys:
+                histo = sum(moys) / len(moys)
+                w = min(0.7, p / 100.0)
+                rank = max(raw, int(round(histo * (1 - w) + raw * w)))
+            else:
+                rank = raw
+
+            out.append({
+                'discipline':           disc,
+                'proba':                p,
+                'rang_estime':          int(max(1, rank)),
+                'cheval_clt_moyen':     (round(chMoy, 1) if chMoy is not None else None),
+                'cavalier_clt_moyen':   (round(cvMoy, 1) if cvMoy is not None else None),
+                'nb_runs_cheval':       int(len(chDisc)),
+                'nb_runs_cavalier':     int(len(cvDisc)),
+                'is_cold_start':        bool(d.get('is_cold_start')),
+            })
+
+        out.sort(key = lambda r: -r['proba'])
+        return out
+
+
+    def predictByCombos(
+        self,
+        cheval:      str,
+        cavalier:    str,
+        discipline:  str,
+        niveau_fix:  str = '',
+        hauteur_fix: str = '',
+    ) -> list[dict[str, Any]]:
+        """
+        Pour une discipline donnée, explose la prédiction par combo
+        (hauteur, niveau) observé dans l'historique du duo. Permet à l'UI,
+        quand l'utilisateur laisse hauteur ET/OU niveau en auto, d'afficher
+        un rang par TYPE d'épreuve effectivement couru — au lieu d'un seul
+        rang moyenné qui masque les écarts (3ᵉ sur 70 cm Hunter vs 72ᵉ
+        sur CSO 80 cm National).
+
+        Si l'utilisateur a FIXÉ une dimension (ex : niveau=Elite, hauteur
+        libre), on ne renvoie QUE les combos qui respectent cette
+        contrainte — les autres niveaux sont exclus, on n'explose que
+        sur l'axe qui reste libre.
+        """
+        self._load()
+
+        chevalKey   = (cheval   or '').strip().upper()
+        cavalierKey = (cavalier or '').strip().upper()
+        discKey     = (discipline or '').strip()
+        if not chevalKey or not discKey:
+            return []
+
+        # Contraintes utilisateur sur les axes
+        niveauFix = (niveau_fix or '').strip()
+        try:
+            hauteurFixInt = int(hauteur_fix) if hauteur_fix and str(hauteur_fix).strip() else None
+        except (TypeError, ValueError):
+            hauteurFixInt = None
+
+        chevalRows   = self._df[self._df['_cheval_key']   == chevalKey]
+        cavalierRows = self._df[self._df['_cavalier_key'] == cavalierKey] if cavalierKey else self._df.iloc[0:0]
+
+        # Garde uniquement la discipline cible
+        chDisc = chevalRows[chevalRows['discipline_famille']   == discKey] if not chevalRows.empty   else self._df.iloc[0:0]
+        cvDisc = cavalierRows[cavalierRows['discipline_famille'] == discKey] if not cavalierRows.empty else self._df.iloc[0:0]
+
+        # Combos (hauteur, niveau) observés — UNION cheval + cavalier
+        def _combos(df: pd.DataFrame) -> set[tuple[int | None, str]]:
+            if df.empty:
+                return set()
+            out: set[tuple[int | None, str]] = set()
+            for _, r in df.iterrows():
+                h = r.get('hauteur_cm')
+                try:
+                    hInt = int(h) if h and not pd.isna(h) and h > 0 else None
+                except (TypeError, ValueError):
+                    hInt = None
+                niv = str(r.get('niveau_epreuve') or '').strip()
+                out.add((hInt, niv))
+            return out
+
+        combos = sorted(
+            _combos(chDisc) | _combos(cvDisc),
+            key = lambda t: ((t[0] or 0), t[1]),
+        )
+
+        # Respect des contraintes utilisateur : si niveau est figé, on
+        # ne garde que les combos avec ce niveau (ne pas mélanger Elite
+        # avec National). Idem pour la hauteur.
+        if niveauFix:
+            combos = [(h, n) for (h, n) in combos if n == niveauFix]
+        if hauteurFixInt is not None:
+            combos = [(h, n) for (h, n) in combos if h == hauteurFixInt]
+        if not combos:
+            return []
+
+        def _comboMask(df: pd.DataFrame, h: int | None, n: str) -> pd.Series:
+            if df.empty:
+                return pd.Series([], dtype=bool)
+            m = df['discipline_famille'] == discKey
+            if h is not None and 'hauteur_cm' in df.columns:
+                m &= pd.to_numeric(df['hauteur_cm'], errors='coerce') == h
+            if n and 'niveau_epreuve' in df.columns:
+                m &= df['niveau_epreuve'] == n
+            return m
+
+        out: list[dict[str, Any]] = []
+        for hauteur, niveau in combos:
+            res = self.predict(
+                cheval     = cheval,
+                cavalier   = cavalier,
+                discipline = discKey,
+                niveau     = niveau,
+                hauteur    = str(hauteur) if hauteur else '',
+            )
+            if isinstance(res, dict):
+                continue
+            d = res.to_dict()
+            p = d['proba']
+
+            # Recalcul des moyennes sur le combo EXACT — pas de cascade,
+            # même si peu de données. C'est le but de la vue "par combo"
+            # de montrer le détail réel par type d'épreuve.
+            chSub = chDisc[_comboMask(chDisc, hauteur, niveau)] if not chDisc.empty else chDisc
+            cvSub = cvDisc[_comboMask(cvDisc, hauteur, niveau)] if not cvDisc.empty else cvDisc
+            chMoy = self._meanClassement(chSub)
+            cvMoy = self._meanClassement(cvSub)
+
+            # Ancrage du rang sur ces moyennes exactes
+            raw  = self.estimateRank(p, discKey)
+            moys = [m for m in (chMoy, cvMoy) if m is not None]
+            if moys:
+                histo = sum(moys) / len(moys)
+                w = min(0.7, p / 100.0)
+                rank = max(raw, int(round(histo * (1 - w) + raw * w)))
+            else:
+                rank = raw
+
+            scope = discKey
+            if hauteur is not None: scope += f" {hauteur} cm"
+            if niveau:              scope += f" — {niveau}"
+
+            out.append({
+                'discipline':         discKey,
+                'hauteur':            hauteur,
+                'niveau':             niveau,
+                'proba':              p,
+                'rang_estime':        int(max(1, rank)),
+                'cheval_clt_moyen':   (round(chMoy, 1) if chMoy is not None else None),
+                'cavalier_clt_moyen': (round(cvMoy, 1) if cvMoy is not None else None),
+                'cheval_clt_scope':   scope,
+                'cavalier_clt_scope': scope,
+                'nb_runs_cheval':     int(len(chSub)),
+                'nb_runs_cavalier':   int(len(cvSub)),
+                'is_cold_start':      bool(d.get('is_cold_start')),
+            })
+
+        out.sort(key = lambda r: -r['proba'])
+        return out
+
+
     def predictBatch(self, engagements: list[dict]) -> list[dict]:
         """
         Prend une liste de rows au format dataset_brut_v2 (typiquement
