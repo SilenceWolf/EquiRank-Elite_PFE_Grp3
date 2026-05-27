@@ -170,6 +170,17 @@ def adapt(input_path: str, output_path: str) -> None:
         "National": 6, "Pro": 7, "Elite": 8,
     }).fillna(3)
 
+    # ── Features d'interaction ────────────────────────────────
+    # Permettent au modèle d'apprendre des nuances type "ce top
+    # cheval performe-t-il MIEUX en Elite qu'en Club ?". Sans ces
+    # croisements, win_rate domine et écrase toute différenciation
+    # entre niveaux/hauteurs pour un même duo elite (saturation).
+    out_sorted["horse_wr_x_niveau"]  = out_sorted["horse_win_rate"] * out_sorted["niveau_num"]
+    out_sorted["horse_wr_x_hauteur"] = out_sorted["horse_win_rate"] * (out_sorted["hauteur_cm"] / 100)
+    out_sorted["rider_wr_x_niveau"]  = out_sorted["rider_win_rate"] * out_sorted["niveau_num"]
+    out_sorted["rider_wr_x_hauteur"] = out_sorted["rider_win_rate"] * (out_sorted["hauteur_cm"] / 100)
+    out_sorted["synergy_x_niveau"]   = out_sorted["couple_synergy"] * out_sorted["niveau_num"]
+
     # ── Nettoyage final ───────────────────────────────────────
     out_sorted = out_sorted[out_sorted["classement"] >= 0]
 
@@ -187,6 +198,10 @@ def adapt(input_path: str, output_path: str) -> None:
         "horse_win_rate", "horse_participations",
         "rider_win_rate", "rider_participations",
         "club_win_rate", "couple_synergy", "experience_ratio",
+        # Features d'interaction (croisements win_rate × contexte)
+        "horse_wr_x_niveau", "horse_wr_x_hauteur",
+        "rider_wr_x_niveau", "rider_wr_x_hauteur",
+        "synergy_x_niveau",
         # Points de qualification
         "pts_qualification",
         # Cibles

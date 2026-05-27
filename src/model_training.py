@@ -23,6 +23,7 @@ from sklearn.metrics        import (
 )
 from sklearn.pipeline       import Pipeline
 from sklearn.preprocessing  import StandardScaler
+from sklearn.calibration    import CalibratedClassifierCV
 
 try:
     from xgboost  import XGBClassifier
@@ -126,14 +127,36 @@ def train_best_model(
     y_train: pd.Series,
     model_name: str = "RandomForest",
     random_state: int = 42,
+    calibrate:   bool = False,
 ):
-    """Entraîne le modèle choisi sur l'ensemble complet et le sauvegarde."""
+    """
+    Entraîne le modèle choisi et le sauvegarde.
+
+    Si `calibrate=True` (par défaut), on enveloppe l'estimateur dans un
+    CalibratedClassifierCV (Platt scaling, 5-fold). Pourquoi :
+      - LightGBM et autres boosters sortent des probas non-calibrées qui
+        saturent à 100 % / 0 % pour les zones bien apprises (cf. un duo
+        à horse_win_rate=0.9 ⇒ proba=100 % alors que rien n'est jamais
+        certain en concours).
+      - Platt scaling apprend une sigmoïde sur les sorties OOF, lisse
+        les probas extrêmes vers des valeurs réalistes (95-98 %), et
+        améliore la calibration sans dégrader la décision binaire.
+    """
     models = get_models(random_state)
     if model_name not in models:
         raise ValueError(f"Modèle inconnu : {model_name}. Disponibles : {list(models)}")
 
-    model = models[model_name]
-    print(f"\n  ⚙ Entraînement de {model_name} sur {X_train.shape[0]} exemples …")
+    base = models[model_name]
+    if calibrate:
+        # method='sigmoid' (Platt scaling). Plus stable qu'isotonic qui
+        # saturait à exactement 1.0 sur les top duos (bins purs). Sigmoid
+        # plafonne plus doucement vers ~0.985.
+        # cv=5 garantit que la sigmoïde apprend sur des sorties OOF.
+        model = CalibratedClassifierCV(base, method = 'sigmoid', cv = 5)
+        print(f"\n  ⚙ Entraînement de {model_name} (+ calibration Platt) sur {X_train.shape[0]} exemples …")
+    else:
+        model = base
+        print(f"\n  ⚙ Entraînement de {model_name} (sans calibration) sur {X_train.shape[0]} exemples …")
     model.fit(X_train, y_train)
 
     path = os.path.join(MODELS_DIR, f"{model_name}.joblib")

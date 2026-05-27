@@ -110,6 +110,11 @@ NUMERIC_COLS = [
     "club_win_rate",
     # Features combinées
     "couple_synergy", "experience_ratio",
+    # Features d'interaction (croisent win_rate × niveau/hauteur — permettent
+    # au modèle de différencier "ce top duo en Elite" vs "ce top duo en Club")
+    "horse_wr_x_niveau", "horse_wr_x_hauteur",
+    "rider_wr_x_niveau", "rider_wr_x_hauteur",
+    "synergy_x_niveau",
     # Points
     "pts_qualification",
     # Ancien dataset
