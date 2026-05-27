@@ -182,11 +182,24 @@ def _runWorker(
             publish    = publish,
             entry_url  = entry_url or None,
         )
-        rows = buildDatasetFuture(step_rows = result.step_rows)
+
+        # Sauvegarde du CSV brut crawler dans crawlresult/ — toujours.
+        # Préfixe "future_" pour distinguer des datasets d'entraînement
+        # (cf. crawl_jobs qui sauve avec "data_").
+        import re as _re
+        _discTag = _re.sub(r'[^a-zA-Z0-9]+', '', discipline)[:20] or 'all'
+        _stamp   = time.strftime('%Y%m%d_%H%M%S')
+        out_csv  = _ROOT / 'crawlresult' / f'future_{_discTag}_{deb}_{fin}_{_stamp}.csv'
+
+        rows = buildDatasetFuture(
+            step_rows   = result.step_rows,
+            output_path = out_csv,
+        )
         _appendEvent(job_id, {
             'type':  'ffe_done',
             'rows':  len(rows),
             'total': result.total_rows,
+            'saved': str(out_csv.relative_to(_ROOT)).replace('\\', '/'),
         })
 
         # ── Étape prédiction ──────────────────────────────────────
@@ -329,8 +342,16 @@ def listConcours(job_id: str | None = None) -> list[dict[str, Any]]:
                 continue
             disciplines = [r.get('s3_Discipline', '') for r in rows]
             disc_mode = max(set(disciplines), key = disciplines.count) if disciplines else ''
-            probas = [r['proba'] for r in rows if isinstance(r.get('proba'), int)]
+            probas = [r['proba'] for r in rows if isinstance(r.get('proba'), (int, float))]
             avgProba = (sum(probas) / len(probas)) if probas else None
+
+            # URL Telemat + dates — pris dans la première row qui les expose
+            # (toutes les rows d'un même concours partagent l'URL ; les dates
+            # peuvent varier par épreuve mais on garde la plus représentée).
+            url    = next((r.get('s2_url') for r in rows if r.get('s2_url')), '')
+            dates  = [r.get('s3_Date') for r in rows if r.get('s3_Date') and r.get('s3_Date') != 'NONE']
+            date_mode = max(set(dates), key = dates.count) if dates else ''
+
             out.append({
                 'concours_id': conc_num,
                 'job_id':      j.job_id,
@@ -338,6 +359,8 @@ def listConcours(job_id: str | None = None) -> list[dict[str, Any]]:
                 'engagements': len(rows),
                 'avg_proba':   round(avgProba, 1) if avgProba is not None else None,
                 'epreuves':    len(set(r.get('s3_Épreuve', '') for r in rows)),
+                'url':         url,
+                'date':        date_mode,
             })
 
     # Tri par numéro de concours (string mais souvent numérique)
@@ -368,12 +391,24 @@ def getConcoursDetail(concours_id: str) -> dict[str, Any] | None:
 
     disciplines = sorted({r.get('s3_Discipline', '') for r in rows if r.get('s3_Discipline')})
     epreuves    = sorted({r.get('s3_Épreuve', '')    for r in rows if r.get('s3_Épreuve')})
+
+    # URL et dates — issus du crawler FFE (s2_url et s3_Date)
+    url    = next((r.get('s2_url') for r in rows if r.get('s2_url')), '')
+    dates  = sorted({r.get('s3_Date') for r in rows if r.get('s3_Date') and r.get('s3_Date') != 'NONE'})
+    date_mode = ''
+    if dates:
+        dlist = [r.get('s3_Date') for r in rows if r.get('s3_Date') and r.get('s3_Date') != 'NONE']
+        date_mode = max(set(dlist), key = dlist.count)
+
     return {
         'concours_id': concours_id,
         'job_id':      j.job_id,
         'disciplines': disciplines,
         'epreuves':    epreuves,
         'engagements': rows,
+        'url':         url,
+        'date':        date_mode,
+        'dates':       dates,
     }
 
 

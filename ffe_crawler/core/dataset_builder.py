@@ -49,6 +49,12 @@ DATASET_COLUMNS: tuple[str, ...] = (
     's5_Mère',
 )
 
+# Colonnes étendues pour le dataset FUTUR — DATASET_COLUMNS + URL du
+# concours (s2_url) et date(s) (s3_Date) pour l'UI /predictions.
+# Garde l'ordre canonique en tête pour rester compatible avec un
+# éventuel script qui lit les 14 premières colonnes.
+FUTURE_COLUMNS: tuple[str, ...] = DATASET_COLUMNS + ('s2_url', 's3_Date')
+
 
 def _normUrl(u: object) -> str:
     """Normalise une URL pour usage en clé de join — strip + str."""
@@ -201,8 +207,10 @@ def buildDatasetFuture(
 
         finalRows.append({
             's2_Numéro':           _pickValue(s2, 'Numéro', 'Numero'),
+            's2_url':              _normUrl(s2.get('href') or s3.get('source_url')),  # lien Telemat du concours
             's3_Discipline':       _pickValue(s3, 'Discipline'),
             's3_Épreuve':          _pickValue(s3, 'Épreuve', 'Epreuve'),
+            's3_Date':             _pickValue(s3, 'Date'),                # date(s) de l'épreuve
             's4_Clt.':             'NONE',                                # futur → inconnu
             's4_Cavalier':         _pickValue(s4, 'Cavalier'),
             's4_Club engageur':    _pickValue(s4, 'Club engageur'),
@@ -220,7 +228,11 @@ def buildDatasetFuture(
         path = Path(output_path)
         path.parent.mkdir(parents = True, exist_ok = True)
         with path.open('w', encoding = 'utf-8-sig', newline = '') as fp:
-            writer = csv.DictWriter(fp, fieldnames = list(DATASET_COLUMNS))
+            writer = csv.DictWriter(
+                fp,
+                fieldnames   = list(FUTURE_COLUMNS),
+                extrasaction = 'ignore',
+            )
             writer.writeheader()
             writer.writerows(finalRows)
 

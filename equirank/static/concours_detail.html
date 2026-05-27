@@ -97,9 +97,19 @@ async function loadDetail() {
     }
     const j = await r.json();
     allRows = j.engagements || [];
-    document.getElementById('concMeta').textContent =
-      (j.disciplines || []).join(' / ') +
-      ' — ' + allRows.length + ' engagement(s) sur ' + (j.epreuves?.length || 0) + ' épreuve(s)';
+
+    // Titre : N° de concours cliquable vers Telemat FFE si on a l'URL
+    if (j.url) {
+      const numEl = document.getElementById('concNum');
+      numEl.innerHTML = `<a href="${j.url}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;">${concoursId} <span style="font-size:14px;color:var(--cyan);">↗</span></a>`;
+      numEl.title = "Ouvrir sur Telemat FFE";
+    }
+
+    const metaParts = [];
+    if (j.date)   metaParts.push('📅 ' + j.date);
+    metaParts.push((j.disciplines || []).join(' / '));
+    metaParts.push(allRows.length + ' engagement(s) sur ' + (j.epreuves?.length || 0) + ' épreuve(s)');
+    document.getElementById('concMeta').innerHTML = metaParts.filter(Boolean).join(' — ');
     render(allRows);
     document.getElementById('loading').style.display = 'none';
   } catch(e) {
