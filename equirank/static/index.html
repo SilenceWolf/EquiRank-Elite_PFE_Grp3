@@ -89,7 +89,7 @@ section { position: relative; z-index: 1; padding: clamp(3rem, 8vw, 6rem) clamp(
 .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px, 6vw, 56px); letter-spacing: 4px; color: var(--text); margin-bottom: 1rem; }
 .section-title span { color: var(--gold); }
 .section-line { width: 60px; height: 1px; background: var(--gold); margin-bottom: 2rem; }
-#predictor { max-width: 860px; margin: 0 auto; }
+#predictor { max-width: 1180px; margin: 0 auto; }
 .predictor-header { text-align: center; margin-bottom: 3rem; }
 .predictor-header .section-line { margin: 0 auto 2rem; }
 .pred-card { background: var(--bg2); border: 1px solid var(--gold-border); padding: clamp(1.5rem, 4vw, 2.5rem); position: relative; overflow: hidden; }
@@ -150,10 +150,66 @@ section { position: relative; z-index: 1; padding: clamp(3rem, 8vw, 6rem) clamp(
 .res-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--text); }
 .res-stat-val.gold { color: var(--gold); }
 .res-stat-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-.compat-pips { display: flex; gap: 5px; margin-top: 6px; }
-.pip { width: 10px; height: 10px; border: 1px solid rgba(245,195,65,0.3); }
-.pip.on { background: var(--gold); border-color: var(--gold); }
 .model-tag { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--cyan); margin-top: 6px; }
+.res-placements { border: 1px solid var(--gold-border); border-top: none; }
+.placements-toggle { width: 100%; padding: 0.9rem 1.5rem; background: transparent; border: none; color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+.placements-toggle:hover { background: rgba(245,195,65,0.06); }
+.placements-toggle .caret { transition: transform 0.2s; }
+.placements-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.placements-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--gold-border); }
+.placements-panel[hidden] { display: none; }
+.placements-col { padding: 1rem 1.25rem; border-right: 1px solid var(--gold-border); min-width: 0; overflow-x: auto; }
+.placements-col:last-child { border-right: none; }
+.placements-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.placements-title span { color: var(--text); }
+.placements-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Montserrat', sans-serif; table-layout: fixed; }
+.placements-table col.col-disc { width: 24%; }
+.placements-table col.col-niv  { width: 28%; }
+.placements-table col.col-haut { width: 16%; }
+.placements-table col.col-clt  { width: 18%; }
+.placements-table col.col-part { width: 14%; }
+.placements-table th { text-align: left; font-weight: 500; color: var(--text-muted); padding: 6px 10px; border-bottom: 1px solid var(--gold-border); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.placements-table td { padding: 6px 10px; border-bottom: 1px solid rgba(245,195,65,0.07); color: var(--text); overflow-wrap: anywhere; word-break: break-word; }
+.placements-table td.num { text-align: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.placements-table td.clt { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--text-muted); text-align: center; }
+.placements-table td.clt.r1, .placements-table td.clt.r2, .placements-table td.clt.r3 { font-size: 18px; }
+.placements-table td.clt.r1 { color: var(--gold); }
+.placements-table td.clt.r2 { color: #C7C7C7; }
+.placements-table td.clt.r3 { color: #CD8A4F; }
+.placements-table td.clt .clt-suffix { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; margin-left: 1px; }
+.rank-medal { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+.rank-medal.r1 { color: var(--gold); }
+.rank-medal.r2 { color: #C7C7C7; }
+.rank-medal.r3 { color: #CD8A4F; }
+.rank-medal .rank-suffix { font-size: 12px; color: var(--text-muted); letter-spacing: 1.5px; margin-left: 2px; }
+.result-multi { display: none; margin-top: 2rem; animation: fadeUp 0.5s ease both; background: var(--bg2); border: 1px solid var(--gold-border); padding: clamp(1rem, 3vw, 2rem); position: relative; }
+.result-multi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.result-multi.on { display: block; }
+.multi-table-wrap { overflow-x: auto; margin-top: 1.5rem; }
+.multi-table { width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; font-size: 13px; }
+.multi-table th { text-align: left; font-weight: 500; color: var(--text-muted); padding: 10px 12px; border-bottom: 1px solid var(--gold-border); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; white-space: nowrap; }
+.multi-table td { padding: 12px; border-bottom: 1px solid rgba(245,195,65,0.07); color: var(--text); }
+.multi-table tbody tr:hover { background: rgba(245,195,65,0.04); }
+.multi-table td.disc { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1.5px; color: var(--text); }
+.multi-table td.proba { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; text-align: center; }
+.multi-table td.proba.favori    { color: #38E373; }
+.multi-table td.proba.outsiderp { color: var(--gold); }
+.multi-table td.proba.outsider  { color: #FF3D3D; }
+.multi-table td.proba.coldstart { color: var(--cyan); }
+.multi-table td.rang { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; text-align: center; color: var(--text-muted); }
+.multi-table td.rang.r1, .multi-table td.rang.r2, .multi-table td.rang.r3 { font-size: 18px; }
+.multi-table td.rang.r1 { color: var(--gold); }
+.multi-table td.rang.r2 { color: #C7C7C7; }
+.multi-table td.rang.r3 { color: #CD8A4F; }
+.multi-table td.rang .rang-suffix { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; margin-left: 1px; }
+.multi-table td.num { text-align: center; color: var(--text-muted); font-size: 12px; }
+.multi-table td.runs { text-align: center; color: var(--text-muted); font-size: 11px; }
+.placements-empty { color: var(--text-muted); font-size: 13px; padding: 6px 8px; }
+@media (max-width: 850px) {
+  .placements-panel { grid-template-columns: 1fr; }
+  .placements-col { border-right: none; border-bottom: 1px solid var(--gold-border); }
+  .placements-col:last-child { border-bottom: none; }
+}
 #how { background: var(--bg2); }
 .how-inner { max-width: 900px; margin: 0 auto; }
 .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; }
@@ -252,7 +308,7 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
        prédictions (snapshot default OU snapshot d'un crawl spécifique). -->
   <div id="activeSnapBar" style="
         display:none;
-        max-width:860px; margin:0 auto 1rem;
+        max-width:1180px; margin:0 auto 1rem;
         padding:0.6rem 1rem;
         background: var(--bg2);
         border: 1px solid var(--gold-border);
@@ -280,6 +336,7 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
         <label>Discipline</label>
         <select id="discipline">
           <option value="">— Sélectionner —</option>
+          <option value="__ALL__">⚡ Toutes épreuves (rang par discipline)</option>
         </select>
       </div>
       <div class="field">
@@ -288,6 +345,15 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
           <option value="">— choisis d'abord une discipline —</option>
         </select>
       </div>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Niveau d'épreuve — optionnel</label>
+        <select id="niveau" disabled>
+          <option value="">— choisis d'abord une discipline —</option>
+        </select>
+      </div>
+      <div class="field" style="visibility:hidden;"></div>
     </div>
     <button class="btn-predict" id="btn" onclick="predict()">⬡ Lancer l'analyse ⬡</button>
     <div class="loader" id="loader">
@@ -303,16 +369,27 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
         </div>
         <div class="res-badge" id="r-disc">—</div>
       </div>
-      <div class="res-proba-block">
+      <div class="res-proba-block" id="r-proba-block">
         <div class="res-pct" id="r-pct">—</div>
         <div class="res-bar-area">
-          <div class="res-bar-label">Probabilité de réussite (top 3 ou Pts qualif ≥ 8)</div>
+          <div class="res-bar-label">Probabilité d'atteindre le top 3</div>
           <div class="res-bar-bg"><div class="res-bar-fill" id="r-bar"></div></div>
           <div class="res-verdict" id="r-verdict">—</div>
           <div class="model-tag" id="r-model">—</div>
         </div>
       </div>
       <div class="res-stats">
+        <!-- 1. Rang prédit en premier — c'est l'info principale -->
+        <div class="res-stat" id="r-rank-cell" style="grid-column: 1 / -1; border-right: none;">
+          <div class="res-stat-label">Rang prédit</div>
+          <div class="res-stat-val gold" id="r-rank" style="font-size: 28px;">—</div>
+        </div>
+        <div class="res-stat" id="r-rank-multi-cell" style="display:none; grid-column: 1 / -1; border-right: none; padding: 1rem 1.5rem;">
+          <div class="res-stat-label">Rang prédit par épreuve</div>
+          <div id="r-rank-multi-body" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- 2. Identité du duo + classements moyens -->
         <div class="res-stat">
           <div class="res-stat-label">Cheval</div>
           <div class="res-stat-val" id="r-horse">—</div>
@@ -324,19 +401,60 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
           <div class="res-stat-sub" id="r-jockey-sub">—</div>
         </div>
         <div class="res-stat">
+          <div class="res-stat-label">Clt moyen cheval</div>
+          <div class="res-stat-val gold" id="r-clt-cheval">—</div>
+          <div class="res-stat-sub" id="r-clt-cheval-sub">—</div>
+        </div>
+        <div class="res-stat">
+          <div class="res-stat-label">Clt moyen cavalier</div>
+          <div class="res-stat-val gold" id="r-clt-cavalier">—</div>
+          <div class="res-stat-sub" id="r-clt-cavalier-sub">—</div>
+        </div>
+
+        <!-- 3. Sorties / réussites juste avant l'analyse du duo -->
+        <div class="res-stat">
           <div class="res-stat-label">Réussites cheval</div>
           <div class="res-stat-val gold" id="r-wins">—</div>
           <div class="res-stat-sub" id="r-wins-sub">—</div>
         </div>
-        <div class="res-stat">
-          <div class="res-stat-label">Compatibilité duo</div>
-          <div class="res-stat-val gold" id="r-compat">—</div>
-          <div class="compat-pips" id="r-pips"></div>
-        </div>
+
+        <!-- 4. Analyse du duo (anciennement "Forme récente") -->
         <div class="res-stat" style="grid-column: 1 / -1; border-right: none;">
-          <div class="res-stat-label">Forme récente</div>
+          <div class="res-stat-label">Analyse du duo</div>
           <div style="font-size:14px;color:var(--text-muted);margin-top:4px;font-family:'Montserrat',sans-serif;font-weight:300;line-height:1.6;" id="r-forme">—</div>
         </div>
+      </div>
+      <div class="res-placements">
+        <button type="button" class="placements-toggle" id="r-placements-btn" aria-expanded="false">
+          <span>Voir le détail des placements</span>
+          <span class="caret">▾</span>
+        </button>
+        <div class="placements-panel" id="r-placements-panel" hidden>
+          <div class="placements-col">
+            <div class="placements-title">Cheval — <span id="r-placements-cheval-name">—</span></div>
+            <table class="placements-table" id="r-placements-cheval"></table>
+          </div>
+          <div class="placements-col">
+            <div class="placements-title">Cavalier — <span id="r-placements-cavalier-name">—</span></div>
+            <table class="placements-table" id="r-placements-cavalier"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vue multi-disciplines : affichée quand l'utilisateur choisit
+         "Toutes épreuves" — chaque ligne = une discipline du duo avec
+         sa proba et son rang ancrés sur l'historique de CETTE discipline. -->
+    <div class="result-multi" id="result-multi">
+      <div class="res-header">
+        <div>
+          <div class="res-duo-name" id="rm-duo">—</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px;letter-spacing:1px;">Prédiction par discipline (triée par probabilité)</div>
+        </div>
+        <div class="res-badge" id="rm-count">—</div>
+      </div>
+      <div class="multi-table-wrap">
+        <table class="multi-table" id="rm-table"></table>
       </div>
     </div>
   </div>
@@ -388,11 +506,6 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
       </div>
       <div class="feat">
         <div class="feat-icon">◈</div>
-        <div class="feat-title">Compatibilité duo</div>
-        <div class="feat-text">Score de synergie basé sur l'historique commun cavalier / cheval.</div>
-      </div>
-      <div class="feat">
-        <div class="feat-icon">◈</div>
         <div class="feat-title">Multi-disciplines</div>
         <div class="feat-text">CSO, Dressage, CCE, Equifun, Endurance… toutes les familles FFE présentes dans le dataset.</div>
       </div>
@@ -427,8 +540,8 @@ async function loadDisciplines() {
       opt.value = d; opt.textContent = d;
       sel.appendChild(opt);
     });
-    // Recharge les hauteurs disponibles quand la discipline change
-    sel.addEventListener('change', () => loadDistances(sel.value));
+    // Recharge les hauteurs ET les niveaux quand la discipline change
+    sel.addEventListener('change', () => { loadDistances(sel.value); loadNiveaux(sel.value); });
   } catch(e) {
     console.error('Disciplines indisponibles:', e);
   }
@@ -456,6 +569,35 @@ async function loadDistances(discipline) {
     sel.disabled = false;
     sel.appendChild(new Option('(toutes hauteurs)', ''));
     dists.forEach(d => sel.appendChild(new Option(d + ' cm', String(d))));
+  } catch(e) {
+    sel.appendChild(new Option('Erreur de chargement', ''));
+    sel.disabled = true;
+  }
+}
+
+// Niveaux d'épreuve disponibles pour la discipline active (Club, Elite,
+// Coupe, National, etc.). Optionnel — si laissé vide, le predictor
+// retombe sur le niveau modal de l'historique du cheval.
+async function loadNiveaux(discipline) {
+  const sel = document.getElementById('niveau');
+  sel.innerHTML = '';
+  if (!discipline || discipline === '__ALL__') {
+    sel.appendChild(new Option('— choisis d\'abord une discipline —', ''));
+    sel.disabled = true;
+    return;
+  }
+  try {
+    const r = await fetch('/api/niveaux?discipline=' + encodeURIComponent(discipline));
+    const j = await r.json();
+    const nivs = j.niveaux || [];
+    if (nivs.length === 0) {
+      sel.appendChild(new Option('— pas de niveau pour cette discipline —', ''));
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    sel.appendChild(new Option('(auto — historique du cheval)', ''));
+    nivs.forEach(n => sel.appendChild(new Option(n, n)));
   } catch(e) {
     sel.appendChild(new Option('Erreur de chargement', ''));
     sel.disabled = true;
@@ -537,13 +679,16 @@ async function predict() {
   const jockey = document.getElementById('jockey').value.trim();
   const disc   = document.getElementById('discipline').value;
   const dist   = document.getElementById('distance').value;
+  const niveau = document.getElementById('niveau').value;
   const err    = document.getElementById('err');
   const loader = document.getElementById('loader');
   const btn    = document.getElementById('btn');
   const result = document.getElementById('result');
 
+  const resultMulti = document.getElementById('result-multi');
   err.classList.remove('on');
   result.classList.remove('on');
+  resultMulti.classList.remove('on');
 
   if (!horse || !disc) {
     err.textContent = 'Veuillez renseigner au moins le cheval et la discipline (le cavalier est optionnel).';
@@ -555,19 +700,77 @@ async function predict() {
   loader.classList.add('on');
 
   try {
-    const res = await fetch('/api/predict', {
+    if (disc === '__ALL__') {
+      // Mode multi-disciplines : une ligne par discipline du duo,
+      // chaque ligne a sa propre proba + rang ancré sur l'historique
+      // dans CETTE discipline (pas la moyenne globale).
+      const res = await fetch('/api/predict-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: '', hauteur: '' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        err.textContent = data.error || data.detail || "Erreur lors de l'analyse.";
+        err.classList.add('on');
+        return;
+      }
+      renderMulti(horse, jockey, data.results || [], { mode: 'disciplines' });
+      return;
+    }
+
+    // Toujours la prédiction simple → alimente la fiche détail (cheval,
+    // cavalier, réussites, clt moyens, rang, forme, placements). En plus,
+    // si discipline est précise mais hauteur OU niveau est en auto, on
+    // lance EN PARALLÈLE la prédiction par combos pour afficher la table
+    // de détail par type d'épreuve EN PLUS de la fiche.
+    const singlePromise = fetch('/api/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist }),
-    });
-    const data = await res.json();
+      body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist, niveau: niveau }),
+    }).then(r => r.json().then(d => ({ ok: r.ok, data: d })));
 
-    if (!res.ok) {
-      err.textContent = data.error || data.detail || 'Erreur lors de l\'analyse. Réessayer.';
+    const wantCombos = disc && (!dist || !niveau);
+    const combosPromise = wantCombos
+      ? fetch('/api/predict-combos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // On transmet la sélection utilisateur — le backend filtre les
+          // combos sur les dimensions fixées (ex : niveau=Elite figé →
+          // seulement les hauteurs où le duo a couru en Elite).
+          body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist, niveau: niveau }),
+        }).then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+          .catch(() => ({ ok: false, data: {} }))
+      : Promise.resolve(null);
+
+    const [single, combos] = await Promise.all([singlePromise, combosPromise]);
+
+    if (!single.ok) {
+      err.textContent = single.data.error || single.data.detail || "Erreur lors de l'analyse. Réessayer.";
       err.classList.add('on');
       return;
     }
-    render(horse, jockey, disc, dist, data);
+    render(horse, jockey, disc, dist, single.data);
+
+    // Mode combos : remplace la stat "Rang prédit" par une mini-table
+    // multi-rangs (un par hauteur/niveau effectivement couru). Tout
+    // reste DANS la fiche unique — un seul bloc visuel. La barre de
+    // proba globale est aussi masquée puisque la table donne la proba
+    // PAR épreuve, plus utile et plus précise.
+    const rankCell      = document.getElementById('r-rank-cell');
+    const rankMultiCell = document.getElementById('r-rank-multi-cell');
+    const probaBlock    = document.getElementById('r-proba-block');
+    const comboRows     = (combos && combos.ok) ? (combos.data.results || []) : [];
+    if (comboRows.length > 1) {
+      rankCell.style.display      = 'none';
+      rankMultiCell.style.display = '';
+      probaBlock.style.display    = 'none';
+      renderRankMulti(comboRows);
+    } else {
+      rankCell.style.display      = '';
+      rankMultiCell.style.display = 'none';
+      probaBlock.style.display    = '';
+    }
   } catch(e) {
     err.textContent = 'Le serveur de prédiction est injoignable. Vérifie qu\'uvicorn tourne.';
     err.classList.add('on');
@@ -578,8 +781,11 @@ async function predict() {
 }
 
 function render(horse, jockey, disc, dist, s) {
-  const proba  = Math.round(s.proba);
-  const compat = s.duo_courses > 0 ? Math.round(s.duo_victoires / s.duo_courses * 100) : 0;
+  // Proba avec 2 décimales max (backend renvoie un float comme 98.32).
+  // On supprime les zéros de queue : "99.00 %" → "99 %", "99.50 %" → "99.5 %",
+  // "99.96 %" → "99.96 %".
+  const probaNum = Number(s.proba);
+  const proba    = probaNum.toFixed(2).replace(/\.?0+$/, '');
   document.getElementById('r-duo').innerHTML  = horse + ' <span>×</span> ' + jockey;
   document.getElementById('r-meta').textContent = disc + (dist ? ' — ' + dist + ' cm' : '');
   document.getElementById('r-disc').textContent = disc;
@@ -591,24 +797,180 @@ function render(horse, jockey, disc, dist, s) {
   document.getElementById('r-jockey-sub').textContent = s.jockey_victoires + ' réussites / ' + s.jockey_courses + ' sorties';
   document.getElementById('r-wins').textContent = s.cheval_victoires;
   document.getElementById('r-wins-sub').textContent = (s.cheval_courses ? Math.round(s.cheval_victoires/s.cheval_courses*100) : 0) + '% de réussite';
-  document.getElementById('r-compat').textContent = compat + '%';
-  document.getElementById('r-forme').textContent = s.forme;
-  const pips = document.getElementById('r-pips');
-  pips.innerHTML = '';
-  const filled = Math.round(compat / 10);
-  for(let i = 0; i < 10; i++) {
-    const d = document.createElement('div');
-    d.className = 'pip' + (i < filled ? ' on' : '');
-    pips.appendChild(d);
+
+  const fmtClt = (v) => (v === null || v === undefined || v === '' || isNaN(v)) ? '—' : Number(v).toFixed(1);
+  document.getElementById('r-clt-cheval').textContent   = fmtClt(s.cheval_clt_moyen);
+  document.getElementById('r-clt-cheval-sub').textContent   = s.cheval_clt_n
+    ? (s.cheval_clt_n   + ' sortie' + (s.cheval_clt_n  > 1 ? 's' : '') + ' · ' + (s.cheval_clt_scope   || '—'))
+    : 'aucune sortie';
+  document.getElementById('r-clt-cavalier').textContent = fmtClt(s.cavalier_clt_moyen);
+  document.getElementById('r-clt-cavalier-sub').textContent = s.cavalier_clt_n
+    ? (s.cavalier_clt_n + ' sortie' + (s.cavalier_clt_n > 1 ? 's' : '') + ' · ' + (s.cavalier_clt_scope || '—'))
+    : 'aucune sortie';
+  const rEl = document.getElementById('r-rank');
+  const rank = s.classement_estime;
+  if (rank && rank > 0) {
+    const cls  = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+    const icon = rank === 1 ? '🥇 ' : rank === 2 ? '🥈 ' : rank === 3 ? '🥉 ' : '';
+    rEl.className = 'res-stat-val rank-medal ' + cls;
+    rEl.innerHTML = icon + rank + '<span class="rank-suffix">ᵉ</span>';
+  } else {
+    rEl.className = 'res-stat-val gold';
+    rEl.textContent = '—';
   }
+
+  renderPlacements('r-placements-cheval',   s.cheval_placements   || []);
+  renderPlacements('r-placements-cavalier', s.cavalier_placements || []);
+  document.getElementById('r-placements-cheval-name').textContent   = horse;
+  document.getElementById('r-placements-cavalier-name').textContent = jockey;
+  const panel = document.getElementById('r-placements-panel');
+  const btn   = document.getElementById('r-placements-btn');
+  panel.hidden = true;
+  btn.setAttribute('aria-expanded', 'false');
+
+  document.getElementById('r-forme').textContent = s.forme;
   const verd = document.getElementById('r-verdict');
-  if (proba >= 60) { verd.textContent = '★ Favori solide'; verd.className = 'res-verdict high'; }
-  else if (proba >= 35) { verd.textContent = '◆ Outsider crédible'; verd.className = 'res-verdict mid'; }
+  if (probaNum >= 60) { verd.textContent = '★ Favori solide'; verd.className = 'res-verdict high'; }
+  else if (probaNum >= 35) { verd.textContent = '◆ Outsider crédible'; verd.className = 'res-verdict mid'; }
   else { verd.textContent = '▲ Outsider'; verd.className = 'res-verdict low'; }
   document.getElementById('result').classList.add('on');
-  setTimeout(() => { document.getElementById('r-bar').style.width = proba + '%'; }, 80);
+  setTimeout(() => { document.getElementById('r-bar').style.width = probaNum + '%'; }, 80);
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// Rendu compact de la mini-table "Rang prédit par épreuve" qui REMPLACE
+// la stat Rang prédit dans la fiche détail quand l'utilisateur laisse
+// hauteur OU niveau en auto avec une discipline précise.
+function renderRankMulti(rows) {
+  const body = document.getElementById('r-rank-multi-body');
+  if (!rows.length) { body.innerHTML = ''; return; }
+  const verdictCls = (p, cs) => cs ? 'coldstart' : (p >= 60 ? 'favori' : p >= 35 ? 'outsiderp' : 'outsider');
+  const rangCell = (r) => {
+    if (!r || r < 1) return '<td class="rang">—</td>';
+    const cls  = r === 1 ? 'r1' : r === 2 ? 'r2' : r === 3 ? 'r3' : '';
+    const icon = r === 1 ? '🥇 ' : r === 2 ? '🥈 ' : r === 3 ? '🥉 ' : '';
+    return `<td class="rang ${cls}">${icon}${r}<span class="rang-suffix">ᵉ</span></td>`;
+  };
+  const fmtClt = (v) => (v === null || v === undefined) ? '—' : Number(v).toFixed(1);
+
+  const head = `<thead><tr>
+    <th>Hauteur</th>
+    <th>Niveau</th>
+    <th style="text-align:center" title="Probabilité d'atteindre le top 3">Proba top 3</th>
+    <th style="text-align:center">Rang prédit</th>
+    <th style="text-align:center">Clt moy. cheval</th>
+    <th style="text-align:center">Clt moy. cav.</th>
+    <th style="text-align:center">Runs ch.</th>
+    <th style="text-align:center">Runs cav.</th>
+  </tr></thead>`;
+
+  const tbody = rows.map(r => `<tr>
+    <td class="disc">${r.hauteur ? r.hauteur + ' cm' : '—'}</td>
+    <td class="disc">${r.niveau || '—'}</td>
+    <td class="proba ${verdictCls(r.proba, r.is_cold_start)}">${Number(r.proba).toFixed(2).replace(/\.?0+$/, '')}%</td>
+    ${rangCell(r.rang_estime)}
+    <td class="num">${fmtClt(r.cheval_clt_moyen)}</td>
+    <td class="num">${fmtClt(r.cavalier_clt_moyen)}</td>
+    <td class="runs">${r.nb_runs_cheval || '—'}</td>
+    <td class="runs">${r.nb_runs_cavalier || '—'}</td>
+  </tr>`).join('');
+
+  body.innerHTML = `<table class="multi-table">${head}<tbody>${tbody}</tbody></table>`;
+}
+
+function renderMulti(horse, jockey, rows, opts) {
+  const mode  = (opts && opts.mode) || 'disciplines';
+  const block = document.getElementById('result-multi');
+  document.getElementById('rm-duo').innerHTML = horse + ' <span>×</span> ' + (jockey || 'sans cavalier');
+
+  const countLabel = mode === 'combos'
+    ? rows.length + ' combo' + (rows.length > 1 ? 's' : '') + ' (' + (opts.discipline || '') + ')'
+    : rows.length + ' épreuve' + (rows.length > 1 ? 's' : '');
+  document.getElementById('rm-count').textContent = countLabel;
+
+  const t = document.getElementById('rm-table');
+  if (!rows.length) {
+    t.innerHTML = '<tr><td style="padding:1rem;color:var(--text-muted)">Aucun résultat exploitable.</td></tr>';
+    block.classList.add('on');
+    block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  // En mode combos on remplace "Discipline" par "Hauteur" + "Niveau" pour
+  // que chaque ligne reflète bien le type d'épreuve.
+  const firstCols = mode === 'combos'
+    ? `<th>Hauteur</th><th>Niveau</th>`
+    : `<th>Discipline</th>`;
+  const head = `<thead><tr>
+    ${firstCols}
+    <th style="text-align:center" title="Probabilité d'atteindre le top 3">Proba top 3</th>
+    <th style="text-align:center">Rang prédit</th>
+    <th style="text-align:center">Clt moy. cheval</th>
+    <th style="text-align:center">Clt moy. cav.</th>
+    <th style="text-align:center">Runs ch.</th>
+    <th style="text-align:center">Runs cav.</th>
+  </tr></thead>`;
+
+  const verdictCls = (p, cs) => cs ? 'coldstart' : (p >= 60 ? 'favori' : p >= 35 ? 'outsiderp' : 'outsider');
+  const rangCell = (r) => {
+    if (!r || r < 1) return '<td class="rang">—</td>';
+    const cls  = r === 1 ? 'r1' : r === 2 ? 'r2' : r === 3 ? 'r3' : '';
+    const icon = r === 1 ? '🥇 ' : r === 2 ? '🥈 ' : r === 3 ? '🥉 ' : '';
+    return `<td class="rang ${cls}">${icon}${r}<span class="rang-suffix">ᵉ</span></td>`;
+  };
+  const fmtClt = (v) => (v === null || v === undefined) ? '—' : Number(v).toFixed(1);
+
+  const body = rows.map(r => {
+    const firstCells = mode === 'combos'
+      ? `<td class="disc">${r.hauteur ? r.hauteur + ' cm' : '—'}</td><td class="disc">${r.niveau || '—'}</td>`
+      : `<td class="disc">${r.discipline}</td>`;
+    return `<tr>
+      ${firstCells}
+      <td class="proba ${verdictCls(r.proba, r.is_cold_start)}">${Number(r.proba).toFixed(2).replace(/\.?0+$/, '')}%</td>
+      ${rangCell(r.rang_estime)}
+      <td class="num">${fmtClt(r.cheval_clt_moyen)}</td>
+      <td class="num">${fmtClt(r.cavalier_clt_moyen)}</td>
+      <td class="runs">${r.nb_runs_cheval || '—'}</td>
+      <td class="runs">${r.nb_runs_cavalier || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  t.innerHTML = head + '<tbody>' + body + '</tbody>';
+  block.classList.add('on');
+  block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderPlacements(tableId, rows) {
+  const t = document.getElementById(tableId);
+  if (!t) return;
+  if (!rows.length) {
+    t.innerHTML = '<tr><td class="placements-empty">Aucun historique exploitable.</td></tr>';
+    return;
+  }
+  const cols = '<colgroup><col class="col-disc"><col class="col-niv"><col class="col-haut"><col class="col-clt"><col class="col-part"></colgroup>';
+  const head = '<thead><tr><th>Discipline</th><th>Niveau</th><th>Haut.</th><th>Clt</th><th>Part.</th></tr></thead>';
+  const body = rows.map(r => {
+    let cltHtml;
+    if (r.clt === null || r.clt === undefined) {
+      cltHtml = '<td class="clt">—</td>';
+    } else {
+      const cls  = r.clt === 1 ? 'r1' : r.clt === 2 ? 'r2' : r.clt === 3 ? 'r3' : '';
+      const icon = r.clt === 1 ? '🥇 ' : r.clt === 2 ? '🥈 ' : r.clt === 3 ? '🥉 ' : '';
+      cltHtml = `<td class="clt ${cls}">${icon}${r.clt}<span class="clt-suffix">ᵉ</span></td>`;
+    }
+    return `<tr><td>${r.discipline || '—'}</td><td>${r.niveau || '—'}</td><td class="num">${r.hauteur || '—'}</td>${cltHtml}<td class="num">${r.participants ?? '—'}</td></tr>`;
+  }).join('');
+  t.innerHTML = cols + head + '<tbody>' + body + '</tbody>';
+}
+
+document.getElementById('r-placements-btn').addEventListener('click', () => {
+  const panel = document.getElementById('r-placements-panel');
+  const btn   = document.getElementById('r-placements-btn');
+  const open  = panel.hidden;
+  panel.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.querySelector('span').textContent = open ? 'Masquer le détail des placements' : 'Voir le détail des placements';
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.tagName !== 'TEXTAREA') predict();
@@ -623,6 +985,8 @@ document.addEventListener('keydown', e => {
   const handler = () => {
     const res = document.getElementById('result');
     if (res) res.classList.remove('on');
+    const resMulti = document.getElementById('result-multi');
+    if (resMulti) resMulti.classList.remove('on');
     const err = document.getElementById('err');
     if (err) err.classList.remove('on');
   };
@@ -639,31 +1003,64 @@ setupAutocomplete('jockey', 'jockey-list', '/api/suggest/cavalier');
 // tableau historique, on retrouve son duo dans sessionStorage et on
 // lance automatiquement l'analyse. On efface ensuite la clé pour ne
 // pas relancer à chaque refresh.
-(function replayFromHistory() {
+(async function replayFromHistory() {
+  let raw;
   try {
-    const raw = sessionStorage.getItem('equirank.replay');
+    raw = sessionStorage.getItem('equirank.replay');
     if (!raw) return;
     sessionStorage.removeItem('equirank.replay');
-    const d = JSON.parse(raw);
-    if (!d.cheval || !d.cavalier) return;
-    // Attendre que les disciplines soient chargées (loadDisciplines() est async)
-    setTimeout(() => {
-      document.getElementById('horse').value  = d.cheval   || '';
-      document.getElementById('jockey').value = d.cavalier || '';
-      const disc = document.getElementById('discipline');
-      if (d.discipline) {
-        // Ajoute l'option si elle n'existe pas encore (cas d'une discipline
-        // exotique présente dans l'historique mais pas dans le dataset actif).
-        if (!Array.from(disc.options).some(o => o.value === d.discipline)) {
-          disc.appendChild(new Option(d.discipline, d.discipline));
-        }
-        disc.value = d.discipline;
+  } catch(e) { return; }
+
+  const d = JSON.parse(raw);
+  // Cavalier optionnel — un cheval seul suffit pour relancer
+  if (!d.cheval) return;
+
+  // Attendre que les disciplines soient chargées (loadDisciplines() est async).
+  // On poll plutôt qu'un setTimeout aveugle pour être sûr que le select
+  // est rempli avant de positionner sa valeur.
+  await new Promise(resolve => {
+    const start = Date.now();
+    const tick = () => {
+      const opts = document.getElementById('discipline').options.length;
+      if (opts > 2 || Date.now() - start > 3000) resolve();
+      else setTimeout(tick, 50);
+    };
+    tick();
+  });
+
+  document.getElementById('horse').value  = d.cheval   || '';
+  document.getElementById('jockey').value = d.cavalier || '';
+  const disc = document.getElementById('discipline');
+  if (d.discipline) {
+    if (!Array.from(disc.options).some(o => o.value === d.discipline)) {
+      disc.appendChild(new Option(d.discipline, d.discipline));
+    }
+    disc.value = d.discipline;
+    // loadDistances + loadNiveaux sont async — on les déclenche manuellement
+    // et on attend leur résolution avant de positionner les valeurs.
+    await Promise.all([loadDistances(d.discipline), loadNiveaux(d.discipline)]);
+
+    if (d.hauteur) {
+      const distSel = document.getElementById('distance');
+      // Si la hauteur exacte n'est pas dans le dataset actif, on l'ajoute
+      // quand même pour que la sélection ne soit pas perdue silencieusement.
+      if (!Array.from(distSel.options).some(o => o.value === String(d.hauteur))) {
+        distSel.appendChild(new Option(d.hauteur + ' cm', String(d.hauteur)));
       }
-      document.getElementById('predictor').scrollIntoView({ behavior: 'smooth' });
-      // Lance l'analyse automatiquement
-      setTimeout(() => predict(), 200);
-    }, 400);
-  } catch(e) { /* sessionStorage indispo */ }
+      distSel.value = String(d.hauteur);
+      distSel.disabled = false;
+    }
+    if (d.niveau) {
+      const nivSel = document.getElementById('niveau');
+      if (!Array.from(nivSel.options).some(o => o.value === d.niveau)) {
+        nivSel.appendChild(new Option(d.niveau, d.niveau));
+      }
+      nivSel.value = d.niveau;
+      nivSel.disabled = false;
+    }
+  }
+  document.getElementById('predictor').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => predict(), 200);
 })();
 </script>
 </body>

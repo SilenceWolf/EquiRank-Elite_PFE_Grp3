@@ -105,9 +105,17 @@ async function loadConcours() {
       const proba = (c.avg_proba !== null && c.avg_proba !== undefined) ? c.avg_proba + '%' : '—';
       const concUrl = '/predictions/' + encodeURIComponent(c.concours_id);
       const dlUrl   = '/api/predictions/download/' + encodeURIComponent(c.concours_id);
+      const ffeUrl  = c.url || '';
+      // N° du concours = lien direct Telemat (s'ouvre dans un nouvel onglet
+      // pour ne pas perdre la page de prédictions courante)
+      const numHtml = ffeUrl
+        ? `<a href="${ffeUrl}" target="_blank" rel="noopener" class="num" title="Ouvrir sur Telemat FFE" onclick="event.stopPropagation();" style="color:var(--gold);text-decoration:none;">N° ${c.concours_id} <span style="font-size:11px;letter-spacing:1px;color:var(--cyan);">↗</span></a>`
+        : `<div class="num">N° ${c.concours_id}</div>`;
+      const dateHtml = c.date ? `<div class="date" style="font-size:12px;letter-spacing:1.5px;color:var(--text-muted);margin-top:4px;">📅 ${c.date}</div>` : '';
       card.innerHTML = `
-        <a href="${concUrl}" style="display:block;text-decoration:none;color:inherit;">
-          <div class="num">N° ${c.concours_id}</div>
+        ${numHtml}
+        ${dateHtml}
+        <a href="${concUrl}" style="display:block;text-decoration:none;color:inherit;margin-top:6px;">
           <div class="disc">${c.discipline || '—'}</div>
           <div class="stats">
             <span><strong>${c.engagements}</strong>engagés</span>

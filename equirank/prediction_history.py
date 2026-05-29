@@ -63,7 +63,7 @@ _LEGACY_FILE  = _DATA_DIR / 'prediction_history.jsonl'
 # détermine le vrai classement (un cheval est rang 1 dans son épreuve,
 # pas dans toute la discipline).
 _COLUMNS = (
-    'ts', 'cheval', 'cavalier', 'discipline', 'epreuve', 'hauteur',
+    'ts', 'cheval', 'cavalier', 'discipline', 'epreuve', 'hauteur', 'niveau',
     'classement_estime',
     'proba', 'verdict', 'is_cold_start',
     'model_name', 'snapshot', 'id',
@@ -168,6 +168,7 @@ def _readCsvFile(path: Path) -> list[dict]:
                          's3_discipline')
     colEpreuve    = _col('epreuve', 'épreuve', 's3_épreuve', 's3_epreuve')
     colHauteur    = _col('hauteur', 'hauteur_cm', 'distance', 'hauteur_centimetres')
+    colNiveau     = _col('niveau', 'niveau_epreuve', 's3_niveau')
     colRank       = _col('classement_estime', 'classement_predit', 'rank')
     colProba      = _col('proba', 'probability', 'probabilité', 'probabilite')
     colVerdict    = _col('verdict')
@@ -238,6 +239,8 @@ def _readCsvFile(path: Path) -> list[dict]:
             except ValueError:
                 classement_estime = 0
 
+        niveau = (row.get(colNiveau, '') if colNiveau else '').strip()
+
         out.append({
             'id':                entry_id,
             'ts':                ts,
@@ -246,6 +249,7 @@ def _readCsvFile(path: Path) -> list[dict]:
             'discipline':        discipline,
             'epreuve':           epreuve,
             'hauteur':           hauteur,
+            'niveau':            niveau,
             'classement_estime': classement_estime,
             'proba':             proba,
             'verdict':           verdict,
@@ -270,13 +274,14 @@ def addEntry(
     snapshot:          str = '',
     epreuve:           str = '',
     hauteur:           str = '',
+    niveau:            str = '',
     classement_estime: int = 0,
 ) -> dict[str, Any]:
     """
     Append au fichier principal `data/history/predictions.csv`.
 
     Déduplication : si une entrée avec la MÊME combinaison
-    (cheval, cavalier, discipline, hauteur) existe déjà dans
+    (cheval, cavalier, discipline, hauteur, niveau) existe déjà dans
     predictions.csv, on la remplace (mise à jour de la proba et de la
     date) plutôt que de créer un doublon. Évite que l'historique se
     pollue de la même prédiction faite 10 fois pour vérifier la valeur.
@@ -289,6 +294,7 @@ def addEntry(
         'discipline':        discipline,
         'epreuve':           epreuve,
         'hauteur':           str(hauteur) if hauteur not in (None, '') else '',
+        'niveau':            str(niveau)  if niveau  not in (None, '') else '',
         'classement_estime': int(classement_estime) if classement_estime else 0,
         'proba':             int(proba),
         'verdict':           verdict,
@@ -307,6 +313,7 @@ def addEntry(
                 (str(d.get('cavalier', '')) or '').strip().upper(),
                 (str(d.get('discipline', '')) or '').strip(),
                 str(d.get('hauteur', '') or '').strip(),
+                str(d.get('niveau', '') or '').strip(),
             )
         newKey = _comboKey(entry)
 

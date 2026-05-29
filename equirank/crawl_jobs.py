@@ -307,12 +307,27 @@ def _runWorker(
             publish    = publish,
             entry_url  = entry_url or None,
         )
-        rows = buildDatasetBrutV2(step_rows = result.step_rows)
+
+        # Sauvegarde du CSV brut crawler dans crawlresult/ — toujours, même
+        # si l'utilisateur n'a pas encore cliqué sur "Écrire dans data/".
+        # Permet de garder une trace de tous les crawls passés sans les
+        # confondre (préfixe "data_" car ce sera potentiellement réutilisé
+        # comme dataset d'entraînement).
+        import re as _re
+        _discTag = _re.sub(r'[^a-zA-Z0-9]+', '', discipline)[:20] or 'all'
+        _stamp   = time.strftime('%Y%m%d_%H%M%S')
+        out_csv  = _ROOT / 'crawlresult' / f'data_{_discTag}_{deb}_{fin}_{_stamp}.csv'
+
+        rows = buildDatasetBrutV2(
+            step_rows   = result.step_rows,
+            output_path = out_csv,
+        )
 
         _appendEvent(job_id, {
             'type':  'ffe_done',
             'rows':  len(rows),
             'total': result.total_rows,
+            'saved': str(out_csv.relative_to(_ROOT)).replace('\\', '/'),
         })
 
         with _jobs_lock:

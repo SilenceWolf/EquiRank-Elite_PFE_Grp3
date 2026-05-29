@@ -148,6 +148,7 @@ class PredictRequest(BaseModel):
     cavalier:   str = Field('',  description='Nom du cavalier — optionnel')
     discipline: str = Field(..., description='Famille de discipline — voir /api/disciplines')
     hauteur:    str = Field('',  description='Hauteur en cm — optionnel, voir /api/distances')
+    niveau:     str = Field('',  description='Niveau d\'épreuve — optionnel, voir /api/niveaux')
 
 
 class CrawlStartRequest(BaseModel):
@@ -251,6 +252,16 @@ def listDisciplines() -> dict:
     return {'disciplines': getDefaultPredictor().listDisciplines()}
 
 
+@app.get('/api/niveaux')
+def listNiveaux(discipline: str = Query('', max_length = 100)) -> dict:
+    """
+    Niveaux d'épreuve disponibles, éventuellement filtrés par discipline
+    (ex: pour CSO, on n'aura pas tous les niveaux poneys). Si discipline
+    est vide, on renvoie l'union de tous les niveaux du dataset.
+    """
+    return {'niveaux': getDefaultPredictor().listNiveaux(discipline)}
+
+
 @app.get('/api/distances')
 def listDistances(discipline: str = Query('', max_length = 80)) -> dict:
     """Hauteurs (cm) disponibles pour la discipline donnée."""
@@ -284,6 +295,62 @@ def suggestCavalier(q: str = Query('', max_length = 80)) -> dict:
     return {'suggestions': getDefaultPredictor().suggestCavalier(q, limit = 8)}
 
 
+@app.post('/api/predict-combos')
+def predictCombos(req: PredictRequest) -> JSONResponse:
+    """
+    Quand l'utilisateur fixe une discipline mais laisse hauteur OU niveau
+    en auto, on déroule une prédiction par combo (hauteur, niveau) observé
+    dans l'historique du duo dans cette discipline. Une ligne par TYPE
+    d'épreuve effectivement couru — pas un seul rang moyenné qui mélange
+    "70 cm Hunter" et "80 cm CSO National".
+    """
+    try:
+        rows = getDefaultPredictor().predictByCombos(
+            cheval     = req.cheval,
+            cavalier   = req.cavalier,
+            discipline = req.discipline,
+            niveau_fix = req.niveau,
+            hauteur_fix = req.hauteur,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code = 503, detail = str(exc))
+
+    if not rows:
+        return JSONResponse(
+            status_code = 422,
+            content     = {'error': "Aucun combo (hauteur, niveau) trouvé pour ce duo dans cette discipline."},
+        )
+    return JSONResponse(content = {'results': rows})
+
+
+@app.post('/api/predict-all')
+def predictAll(req: PredictRequest) -> JSONResponse:
+    """
+    Prédit le duo sur CHAQUE discipline où il a un historique (cheval
+    OU cavalier). Renvoie une liste — chaque entrée a sa propre proba
+    et son propre rang ancré sur l'historique de cette discipline.
+
+    Pourquoi : une moyenne historique globale (toutes disciplines
+    confondues) écrase les écarts réels — un duo peut être 2ᵉ en
+    CSO 100 et 14ᵉ en CSO 130. Le mode "Toutes épreuves" expose ces
+    différences au lieu de les masquer derrière une seule proba.
+    """
+    try:
+        rows = getDefaultPredictor().predictAllDisciplines(
+            cheval   = req.cheval,
+            cavalier = req.cavalier,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code = 503, detail = str(exc))
+
+    if not rows:
+        return JSONResponse(
+            status_code = 422,
+            content     = {'error': "Aucun historique trouvé pour ce duo — impossible de prédire toutes les disciplines."},
+        )
+    return JSONResponse(content = {'results': rows})
+
+
 @app.post('/api/predict')
 def predict(req: PredictRequest) -> JSONResponse:
     try:
@@ -291,6 +358,8 @@ def predict(req: PredictRequest) -> JSONResponse:
             cheval     = req.cheval,
             cavalier   = req.cavalier,
             discipline = req.discipline,
+            niveau     = req.niveau,
+            hauteur    = req.hauteur,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code = 503, detail = str(exc))
@@ -300,23 +369,48 @@ def predict(req: PredictRequest) -> JSONResponse:
 
     payload = result.to_dict()
 
+    # Estimation du classement individuel — blend entre :
+    #  1. rang brut dérivé de la proba (estimateRank → 1 si proba=100 %,
+    #     car le modèle prédit "top 3 OU pts ≥ 8", pas le rang direct)
+    #  2. classement moyen historique du duo (cheval + cavalier)
+    #
+    # Pourquoi blender : un duo dont le clt moyen est 10 ne peut pas
+    # raisonnablement être prédit 1ᵉ même si la proba binaire est à 100 %.
+    # On garde le rang brut comme borne basse atteignable et on l'ancre
+    # sur l'historique du duo, pondéré par la confiance du modèle.
+    p   = payload.get('proba', 0) or 0
+    raw = getDefaultPredictor().estimateRank(p, req.discipline)
+
+    chMoy = payload.get('cheval_clt_moyen')
+    cvMoy = payload.get('cavalier_clt_moyen')
+    if chMoy is not None or cvMoy is not None:
+        # Moyenne pondérée des deux historiques (fallback sur celui qui existe)
+        moys  = [m for m in (chMoy, cvMoy) if m is not None]
+        histo = sum(moys) / len(moys)
+        # Blend : poids de la proba PLAFONNÉ à 0.7 — à proba 100 % l'historique
+        # garde 30 % d'influence. Sinon un duo dont le clt moyen est 10 mais
+        # à proba 100 % se retrouverait prédit 1ᵉ, ce qui contredit son
+        # propre historique (la proba "top 3 OU pts ≥ 8" du modèle binaire
+        # n'est PAS un rang).
+        w = min(0.7, p / 100.0)
+        rank = int(round(histo * (1 - w) + raw * w))
+        rank = max(raw, rank)         # le rang ne peut pas être MEILLEUR que le brut
+    else:
+        rank = raw
+
+    payload['classement_estime'] = int(max(1, rank))
+
     # Journalise la prédiction réussie dans l'historique persistant
     # (data/prediction_history.jsonl). Permet à l'utilisateur de
     # consulter et exporter ses précédentes prédictions via /history.
     try:
         active = snapshots.getActiveSnapshot()
-        # Estimation du classement individuel (rang dans une épreuve
-        # typique de cette discipline). Le modèle PFE ne prédit pas un
-        # rang direct, on l'inverse depuis la proba — voir
-        # EquirankPredictor.estimateRank() pour la formule.
-        rank = getDefaultPredictor().estimateRank(
-            payload.get('proba', 0), req.discipline,
-        )
         prediction_history.addEntry(
             cheval            = req.cheval,
             cavalier          = req.cavalier,
             discipline        = req.discipline,
             hauteur           = req.hauteur,
+            niveau            = req.niveau,
             classement_estime = rank,
             proba             = payload.get('proba', 0),
             verdict           = payload.get('verdict', '') or (

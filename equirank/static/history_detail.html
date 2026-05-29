@@ -85,7 +85,7 @@
     </div>
 
     <table class="parts-table" id="tbl" style="display:none">
-      <thead><tr>
+      <thead id="tblHead"><tr>
         <th style="text-align:center">Rang</th>
         <th>Date</th>
         <th>Cheval</th><th>Cavalier</th><th>Discipline</th>
@@ -175,12 +175,18 @@ async function load(q) {
     // Cache pour downloadGroup() qui réutilise ces rows sans refetch
     allRowsCache = rows;
 
-    // Méta : nb total + proba moyenne
-    const probas = rows.filter(r => !r.is_cold_start && typeof r.proba === 'number').map(r => r.proba);
-    const avg = probas.length ? (probas.reduce((a,b)=>a+b,0) / probas.length).toFixed(1) : '—';
-    document.getElementById('metaLine').textContent =
-      rows.length + ' entrée(s) · proba moyenne ' + (avg === '—' ? '—' : avg + '%') +
-      ' · ' + rows.filter(r => r.is_cold_start).length + ' cold-start';
+    // Méta : pour predictions.csv on cache la proba moyenne (juste pair
+    // + sélections affichées) ; pour les autres on garde le détail.
+    if (filename === 'predictions.csv') {
+      document.getElementById('metaLine').textContent =
+        rows.length + ' prédiction' + (rows.length > 1 ? 's' : '') + ' sauvegardée(s)';
+    } else {
+      const probas = rows.filter(r => !r.is_cold_start && typeof r.proba === 'number').map(r => r.proba);
+      const avg = probas.length ? (probas.reduce((a,b)=>a+b,0) / probas.length).toFixed(1) : '—';
+      document.getElementById('metaLine').textContent =
+        rows.length + ' entrée(s) · proba moyenne ' + (avg === '—' ? '—' : avg + '%') +
+        ' · ' + rows.filter(r => r.is_cold_start).length + ' cold-start';
+    }
 
     if (rows.length === 0) {
       empty.textContent = q ? 'Aucune entrée correspondante.' : 'Fichier vide.';
@@ -218,26 +224,95 @@ async function load(q) {
 function renderFlat(rows) {
   const tbody = document.getElementById('tbody');
   const tbl   = document.getElementById('tbl');
+  const head  = document.getElementById('tblHead');
   tbl.style.display = '';
   // Cache les éventuels groupes précédents
   const old = document.getElementById('groupContainer');
   if (old) old.remove();
   tbody.innerHTML = '';
 
-  // Pour predictions.csv : chaque ligne est une prédiction UNITAIRE et
-  // INDÉPENDANTE — le rang à afficher est `classement_estime` propre
-  // à la ligne (calculé par le predictor à partir de la proba × taille
-  // moyenne d'épreuve), PAS le numéro de ligne dans le tri.
-  // Pour les autres CSV (imports), le rang reste le numéro de ligne
-  // dans le tri global (cas où on a forcé renderFlat).
   const isUnit = (filename === 'predictions.csv');
 
+  // Pour predictions.csv : on n'affiche que la PAIRE + les SÉLECTIONS
+  // faites (discipline + hauteur + niveau). Pas de rang, pas de proba,
+  // pas de verdict — chaque prédiction unitaire est indépendante et
+  // peut être rejouée en cliquant dessus pour avoir la fiche détaillée.
+  // Pour les autres CSV (imports / crawl predict), on garde le rendu
+  // riche avec rang + proba + verdict.
+  head.innerHTML = isUnit
+    ? `<tr>
+        <th>Date</th>
+        <th>Cheval</th><th>Cavalier</th>
+        <th>Discipline</th>
+        <th style="text-align:center">Hauteur</th>
+        <th>Niveau</th>
+        <th style="text-align:center">Proba</th>
+        <th class="del-btn"></th>
+      </tr>`
+    : `<tr>
+        <th style="text-align:center">Rang</th>
+        <th>Date</th>
+        <th>Cheval</th><th>Cavalier</th><th>Discipline</th>
+        <th style="text-align:center">Hauteur</th>
+        <th style="text-align:center">Proba</th>
+        <th>Verdict</th>
+        <th>Modèle</th>
+        <th class="del-btn"></th>
+      </tr>`;
+
   rows.forEach((e, i) => {
-    const rank = isUnit
-      ? (Number(e.classement_estime) || 0)
-      : (e.rank || (i + 1));
-    tbody.appendChild(makeRow(e, rank, /* showRank= */ true, /* withDiscipline= */ true));
+    if (isUnit) {
+      tbody.appendChild(makeRowUnit(e));
+    } else {
+      const rank = e.rank || (i + 1);
+      tbody.appendChild(makeRow(e, rank, /* showRank= */ true, /* withDiscipline= */ true));
+    }
   });
+}
+
+// Variante compacte pour predictions.csv — pair + sélections.
+// La proba n'est affichée QUE si la sélection était unique (hauteur ET
+// niveau renseignés). Sinon on offre un "voir détail" qui rejoue la
+// prédiction en mode combos pour afficher la table des probas par
+// (hauteur, niveau) effectivement courus.
+function makeRowUnit(e) {
+  const delBtn = `<td class="del-btn"><button onclick="event.stopPropagation();delEntry('${esc(e.id)}')" title="Supprime de predictions.csv">×</button></td>`;
+  const hasHauteur = e.hauteur && String(e.hauteur).trim() !== '';
+  const hasNiveau  = e.niveau  && String(e.niveau).trim()  !== '';
+  const isUnique   = hasHauteur && hasNiveau;
+
+  let probaCell;
+  if (isUnique && (e.proba !== '' && e.proba != null)) {
+    const v = e.verdict || (e.proba >= 60 ? 'favori' : e.proba >= 35 ? 'outsider+' : 'outsider');
+    probaCell = `<td class="proba ${verdictClass(v)}">${e.proba}%</td>`;
+  } else {
+    // Sélection partielle → clic ouvre la fiche détaillée en mode combos
+    probaCell = `<td style="text-align:center">
+      <a href="#" class="see-detail" data-id="${esc(e.id)}" style="color:var(--cyan);text-decoration:none;font-size:12px;letter-spacing:1px;text-transform:uppercase;">👁 voir détail</a>
+    </td>`;
+  }
+
+  const tr = document.createElement('tr');
+  tr.title = 'Clic — relancer cette prédiction sur la page Prédire';
+  tr.innerHTML = `
+    <td style="font-size:13px;color:var(--text-muted)">${fmtDate(e.ts)}</td>
+    <td class="cheval">${esc(e.cheval)}</td>
+    <td class="cavalier">${esc(e.cavalier) || '<span style="color:var(--text-muted)">—</span>'}</td>
+    <td>${esc(e.discipline)}</td>
+    <td style="text-align:center;font-size:13px;color:var(--text-muted)">${e.hauteur ? esc(e.hauteur) + ' cm' : '—'}</td>
+    <td>${esc(e.niveau) || '<span style="color:var(--text-muted)">auto</span>'}</td>
+    ${probaCell}
+    ${delBtn}`;
+  tr.addEventListener('click', () => replayPrediction(e));
+  // Le lien "voir détail" rejoue SANS hauteur/niveau → mode combos
+  const seeDetail = tr.querySelector('.see-detail');
+  if (seeDetail) {
+    seeDetail.addEventListener('click', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      replayPrediction({ ...e, hauteur: '', niveau: '' });
+    });
+  }
+  return tr;
 }
 
 function renderGrouped(rows, groupKey) {
@@ -419,6 +494,8 @@ function replayPrediction(entry) {
       cheval:     entry.cheval     || '',
       cavalier:   entry.cavalier   || '',
       discipline: entry.discipline || '',
+      hauteur:    entry.hauteur    || '',
+      niveau:     entry.niveau     || '',
     }));
   } catch(e) {}
   window.location.href = '/';
