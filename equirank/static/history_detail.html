@@ -271,15 +271,14 @@ function renderFlat(rows) {
 }
 
 // Variante compacte pour predictions.csv — pair + sélections.
-// La proba n'est affichée QUE si la sélection était unique (hauteur ET
-// niveau renseignés). Sinon on offre un "voir détail" qui rejoue la
-// prédiction en mode combos pour afficher la table des probas par
-// (hauteur, niveau) effectivement courus.
+// La proba n'est affichée QUE si la sélection a abouti à UN combo unique
+// au moment de la prédiction (n_combos == 1 — c'est le backend qui le
+// sait via /api/predict-combos avec les filtres user). Couvre proprement
+// les disciplines sans hauteur (Dressage, Equifun…) — pas besoin d'une
+// heuristique côté front. Si n_combos > 1 → "voir détail".
 function makeRowUnit(e) {
   const delBtn = `<td class="del-btn"><button onclick="event.stopPropagation();delEntry('${esc(e.id)}')" title="Supprime de predictions.csv">×</button></td>`;
-  const hasHauteur = e.hauteur && String(e.hauteur).trim() !== '';
-  const hasNiveau  = e.niveau  && String(e.niveau).trim()  !== '';
-  const isUnique   = hasHauteur && hasNiveau;
+  const isUnique = Number(e.n_combos) === 1;
 
   let probaCell;
   if (isUnique && (e.proba !== '' && e.proba != null)) {

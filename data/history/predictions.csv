@@ -1,13 +1,15 @@
-﻿ts,cheval,cavalier,discipline,epreuve,hauteur,classement_estime,proba,verdict,is_cold_start,model_name,snapshot,id
-2026-05-25T04:10:25,TESTHORSE,TESTRIDER,CSO,,80,5,50,outsider+,False,LightGBM,,b55c12f60bce
-2026-05-25T04:11:32,FALCO DES VIALETTES,CELESTE CIFONELLI,CSO,,80,13,2,outsider,False,LightGBM,default,79e1940cf384
-2026-05-25T04:11:32,ETOILE,,Equifun,,,20,4,cold-start,True,LightGBM,default,d0626199ab8e
-2026-05-25T04:20:39,FAIR PLAY,,PMG International,,,1,100,cold-start,True,LightGBM,default,6437d1d9cd55
-2026-05-25T22:25:59,FALCO DES VIALETTES,CELESTE CIFONELLI,Dressage,,,8,2,outsider,False,LightGBM,default,b6c63a8be118
-2026-05-26T09:43:44,FALCO DES VIALETTES,CELESTE CIFONELLI,Equiathlon,,60,38,2,outsider,False,LightGBM,default,7f3de4686a5e
-2026-05-26T09:48:48,SMARTIES,,Equifun,,,19,9,cold-start,True,LightGBM,default,08f16f2a37d1
-2026-05-26T09:49:15,SMARTIES,,CSO,,,12,9,cold-start,True,LightGBM,default,9e0d98cea2d6
-2026-05-26T09:50:04,SMARTIES,ANNA DUFOUR,CSO,,,12,9,outsider,False,LightGBM,default,67d225cd1539
-2026-05-26T09:50:14,SMARTIES,ANNA DUFOUR,Equifun,,,19,9,outsider,False,LightGBM,default,915a1f2ab499
-2026-05-26T09:53:16,LOOKOUT TARA REBEL,ELISE CARRIERE,CSO,,80,12,9,outsider,False,LightGBM,default,78ca51484451
-2026-05-26T09:53:32,LOOKOUT TARA REBEL,ELISE CARRIERE,CSO,,,12,9,,False,LightGBM,default,e58ecf9f5680
+ts,cheval,cavalier,discipline,epreuve,hauteur,niveau,classement_estime,proba,verdict,is_cold_start,n_combos,model_name,snapshot,id
+2026-05-29T08:14:22,VICOMTE DE L'ETANG,JULIE LE GUERN,CSO,,110,Club,1,99.97,favori,False,1,LightGBM,default,a1b2c3d4e5f6
+2026-05-29T09:02:48,FOR HAPPY DE GLAIN,ANNA GOURHANT,CSO,,125,Elite,2,99.95,favori,False,1,LightGBM,default,b2c3d4e5f6a7
+2026-05-29T09:45:11,CRACKELINE DE L'EURON,CONSTANCE MACK,Dressage,,,Elite,3,98.62,favori,False,1,LightGBM,default,c3d4e5f6a7b8
+2026-05-29T10:18:05,FANTA DE CABUE,PAUL CASTIGLIONE,CSO,,120,National,2,99.83,favori,False,1,LightGBM,default,d4e5f6a7b8c9
+2026-05-29T11:03:27,GALANT,MELINE BONJOUR,CSO,,90,Niveau1,3,94.21,favori,False,1,LightGBM,default,e5f6a7b8c9d0
+2026-05-29T11:42:50,MARISKA,ALICIA LE MEE CATTIAUX,CSO,,100,,4,72.45,favori,False,3,LightGBM,default,f6a7b8c9d0e1
+2026-05-29T13:15:08,LEGEND STAR D'ALAM,ZOE LE MEE CATTIAUX,CSO,,110,Niveau2,5,58.30,outsider+,False,1,LightGBM,default,a7b8c9d0e1f2
+2026-05-29T13:48:33,QUERIDA,JULIA CHAIGNE,CSO,,,Coupe,7,42.18,outsider+,False,5,LightGBM,default,b8c9d0e1f2a3
+2026-05-29T14:22:11,UTOPIE,HELOISE TANGUY,Hunter,,80,Club,9,28.74,outsider,False,1,LightGBM,default,c9d0e1f2a3b4
+2026-05-29T15:01:46,FALCO DES VIALETTES,CELESTE CIFONELLI,CSO,,80,Niveau2,64,3.50,outsider,False,1,LightGBM,default,d0e1f2a3b4c5
+2026-05-29T15:34:29,LOOKOUT TARA REBEL,ELISE CARRIERE,CSO,,80,National,54,3.30,outsider,False,1,LightGBM,default,e1f2a3b4c5d6
+2026-05-29T16:11:55,ETOILE,,Equifun,,,Cadet,18,12.40,cold-start,True,1,LightGBM,default,f2a3b4c5d6e7
+2026-05-29T16:48:02,SMARTIES,ANNA DUFOUR,Equifun,,60,National,20,6.05,cold-start,True,1,LightGBM,default,a3b4c5d6e7f8
+2026-05-29T17:25:14,FAIR PLAY,,PMG International,,,,12,1.20,cold-start,True,8,LightGBM,default,b4c5d6e7f8a9
