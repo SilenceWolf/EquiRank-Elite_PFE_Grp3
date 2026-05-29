@@ -405,6 +405,21 @@ def predict(req: PredictRequest) -> JSONResponse:
     # consulter et exporter ses précédentes prédictions via /history.
     try:
         active = snapshots.getActiveSnapshot()
+        # Combien de combos matchent la sélection user ? Si 1 = sélection
+        # vraiment unique (peu importe que la discipline ait des hauteurs
+        # ou pas) → la front affichera la proba. Si > 1 → "voir détail".
+        try:
+            combos = getDefaultPredictor().predictByCombos(
+                cheval     = req.cheval,
+                cavalier   = req.cavalier,
+                discipline = req.discipline,
+                niveau_fix = req.niveau,
+                hauteur_fix = req.hauteur,
+            )
+            nCombos = len(combos)
+        except Exception:
+            nCombos = 0
+
         prediction_history.addEntry(
             cheval            = req.cheval,
             cavalier          = req.cavalier,
@@ -416,6 +431,7 @@ def predict(req: PredictRequest) -> JSONResponse:
             verdict           = payload.get('verdict', '') or (
                 'cold-start' if payload.get('is_cold_start') else ''
             ),
+            n_combos          = nCombos,
             model_name        = payload.get('model_name', ''),
             is_cold_start     = bool(payload.get('is_cold_start', False)),
             snapshot          = active.snapshot_id if active else '',

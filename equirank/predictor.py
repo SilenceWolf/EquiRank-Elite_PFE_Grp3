@@ -911,8 +911,16 @@ class EquirankPredictor:
                 out.add((hInt, niv))
             return out
 
+        # On énumère TOUS les combos (hauteur, niveau) existants dans
+        # cette discipline au niveau du dataset GLOBAL — pas seulement
+        # ceux que le duo a déjà courus. Permet à l'utilisateur de voir
+        # "toutes les épreuves possibles en CSO pour ce duo", y compris
+        # celles où il n'a aucun historique direct (cold-start partiel).
+        # Le modèle fait sa prédiction selon le profil général du duo
+        # + les paramètres niveau/hauteur du combo.
+        globalDisc = self._df[self._df['discipline_famille'] == discKey]
         combos = sorted(
-            _combos(chDisc) | _combos(cvDisc),
+            _combos(globalDisc),
             key = lambda t: ((t[0] or 0), t[1]),
         )
 

@@ -66,6 +66,7 @@ _COLUMNS = (
     'ts', 'cheval', 'cavalier', 'discipline', 'epreuve', 'hauteur', 'niveau',
     'classement_estime',
     'proba', 'verdict', 'is_cold_start',
+    'n_combos',
     'model_name', 'snapshot', 'id',
 )
 
@@ -169,6 +170,7 @@ def _readCsvFile(path: Path) -> list[dict]:
     colEpreuve    = _col('epreuve', 'épreuve', 's3_épreuve', 's3_epreuve')
     colHauteur    = _col('hauteur', 'hauteur_cm', 'distance', 'hauteur_centimetres')
     colNiveau     = _col('niveau', 'niveau_epreuve', 's3_niveau')
+    colNCombos    = _col('n_combos', 'nb_combos')
     colRank       = _col('classement_estime', 'classement_predit', 'rank')
     colProba      = _col('proba', 'probability', 'probabilité', 'probabilite')
     colVerdict    = _col('verdict')
@@ -241,6 +243,13 @@ def _readCsvFile(path: Path) -> list[dict]:
 
         niveau = (row.get(colNiveau, '') if colNiveau else '').strip()
 
+        n_combos = 0
+        if colNCombos and row.get(colNCombos):
+            try:
+                n_combos = int(float(str(row[colNCombos]).strip()))
+            except ValueError:
+                n_combos = 0
+
         out.append({
             'id':                entry_id,
             'ts':                ts,
@@ -253,6 +262,7 @@ def _readCsvFile(path: Path) -> list[dict]:
             'classement_estime': classement_estime,
             'proba':             proba,
             'verdict':           verdict,
+            'n_combos':          n_combos,
             'model_name':        model_nm,
             'is_cold_start':     is_cold,
             'snapshot':          snapshot,
@@ -276,6 +286,7 @@ def addEntry(
     hauteur:           str = '',
     niveau:            str = '',
     classement_estime: int = 0,
+    n_combos:          int = 0,
 ) -> dict[str, Any]:
     """
     Append au fichier principal `data/history/predictions.csv`.
@@ -298,6 +309,7 @@ def addEntry(
         'classement_estime': int(classement_estime) if classement_estime else 0,
         'proba':             int(proba),
         'verdict':           verdict,
+        'n_combos':          int(n_combos) if n_combos else 0,
         'model_name':        model_name,
         'is_cold_start':     bool(is_cold_start),
         'snapshot':          snapshot,
