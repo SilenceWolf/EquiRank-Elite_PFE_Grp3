@@ -379,13 +379,16 @@ footer { position: relative; z-index: 1; border-top: 1px solid var(--gold-border
         </div>
       </div>
       <div class="res-stats">
-        <!-- 1. Rang prédit en premier — c'est l'info principale -->
-        <div class="res-stat" id="r-rank-cell" style="grid-column: 1 / -1; border-right: none;">
-          <div class="res-stat-label">Rang prédit</div>
+        <!-- 1. Classement moyen prédit — toujours en mode tableau pour
+             l'homogénéité visuelle entre prédiction unique et multi-combos.
+             Cellule cachée par défaut, c'est r-rank-multi-cell qui prend
+             la place avec une mini-table même pour 1 seul combo. -->
+        <div class="res-stat" id="r-rank-cell" style="display:none; grid-column: 1 / -1; border-right: none;">
+          <div class="res-stat-label">Rang moy. prédit</div>
           <div class="res-stat-val gold" id="r-rank" style="font-size: 28px;">—</div>
         </div>
         <div class="res-stat" id="r-rank-multi-cell" style="display:none; grid-column: 1 / -1; border-right: none; padding: 1rem 1.5rem;">
-          <div class="res-stat-label">Rang prédit par épreuve</div>
+          <div class="res-stat-label">Rang moy. prédit par épreuve</div>
           <div id="r-rank-multi-body" style="margin-top: 10px;"></div>
         </div>
 
@@ -730,18 +733,16 @@ async function predict() {
       body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist, niveau: niveau }),
     }).then(r => r.json().then(d => ({ ok: r.ok, data: d })));
 
-    const wantCombos = disc && (!dist || !niveau);
-    const combosPromise = wantCombos
-      ? fetch('/api/predict-combos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // On transmet la sélection utilisateur — le backend filtre les
-          // combos sur les dimensions fixées (ex : niveau=Elite figé →
-          // seulement les hauteurs où le duo a couru en Elite).
-          body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist, niveau: niveau }),
-        }).then(r => r.json().then(d => ({ ok: r.ok, data: d })))
-          .catch(() => ({ ok: false, data: {} }))
-      : Promise.resolve(null);
+    // On appelle TOUJOURS predict-combos pour garder un affichage homogène
+    // (même rendu tableau pour 1 ou plusieurs combos). Le backend filtre
+    // selon les dimensions fixées (hauteur, niveau) — sélection complète
+    // = 1 ligne dans la table, sélection partielle = plusieurs.
+    const combosPromise = fetch('/api/predict-combos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cheval: horse, cavalier: jockey, discipline: disc, hauteur: dist, niveau: niveau }),
+    }).then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+      .catch(() => ({ ok: false, data: {} }));
 
     const [single, combos] = await Promise.all([singlePromise, combosPromise]);
 
@@ -757,19 +758,28 @@ async function predict() {
     // reste DANS la fiche unique — un seul bloc visuel. La barre de
     // proba globale est aussi masquée puisque la table donne la proba
     // PAR épreuve, plus utile et plus précise.
+    //
+    // Règle d'affichage : dès qu'on est en mode combos (= au moins un
+    // champ hauteur OU niveau en auto) avec au moins 1 résultat, on
+    // affiche la TABLE — même si elle n'a qu'une ligne. Ça garantit un
+    // rendu UNIFORME entre "1 seul combo trouvé" et "plusieurs combos".
     const rankCell      = document.getElementById('r-rank-cell');
     const rankMultiCell = document.getElementById('r-rank-multi-cell');
     const probaBlock    = document.getElementById('r-proba-block');
     const comboRows     = (combos && combos.ok) ? (combos.data.results || []) : [];
-    if (comboRows.length > 1) {
+    // Rendu uniforme : on affiche TOUJOURS la mini-table dès qu'on a
+    // au moins 1 combo (même pour une sélection complète = 1 seule ligne).
+    // La fiche "rang prédit" simple ne sert plus que de fallback si le
+    // backend ne renvoie aucun combo exploitable.
+    if (comboRows.length >= 1) {
       rankCell.style.display      = 'none';
-      rankMultiCell.style.display = '';
+      rankMultiCell.style.display = 'block';
       probaBlock.style.display    = 'none';
       renderRankMulti(comboRows);
     } else {
-      rankCell.style.display      = '';
+      rankCell.style.display      = 'block';
       rankMultiCell.style.display = 'none';
-      probaBlock.style.display    = '';
+      probaBlock.style.display    = 'flex';
     }
   } catch(e) {
     err.textContent = 'Le serveur de prédiction est injoignable. Vérifie qu\'uvicorn tourne.';
@@ -857,7 +867,7 @@ function renderRankMulti(rows) {
     <th>Hauteur</th>
     <th>Niveau</th>
     <th style="text-align:center" title="Probabilité d'atteindre le top 3">Proba top 3</th>
-    <th style="text-align:center">Rang prédit</th>
+    <th style="text-align:center" title="Rang moyen prédit — dépend aussi des autres participants effectifs">Rang moy. prédit</th>
     <th style="text-align:center">Clt moy. cheval</th>
     <th style="text-align:center">Clt moy. cav.</th>
     <th style="text-align:center">Runs ch.</th>
@@ -904,7 +914,7 @@ function renderMulti(horse, jockey, rows, opts) {
   const head = `<thead><tr>
     ${firstCols}
     <th style="text-align:center" title="Probabilité d'atteindre le top 3">Proba top 3</th>
-    <th style="text-align:center">Rang prédit</th>
+    <th style="text-align:center" title="Rang moyen prédit — dépend aussi des autres participants effectifs">Rang moy. prédit</th>
     <th style="text-align:center">Clt moy. cheval</th>
     <th style="text-align:center">Clt moy. cav.</th>
     <th style="text-align:center">Runs ch.</th>
