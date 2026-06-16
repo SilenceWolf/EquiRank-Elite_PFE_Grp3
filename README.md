@@ -54,12 +54,61 @@ PFE/
 
 ---
 
+## 🛠️ Setup environnement Python 3.14
+
+Le projet est testé sur **Python 3.14**. Si tu n'as pas encore cette version :
+
+```powershell
+# Windows — via winget (recommandé)
+winget install Python.Python.3.14
+
+# OU via l'installeur officiel : https://www.python.org/downloads/
+
+# Vérifier l'installation
+py -3.14 --version          # Windows (Python launcher)
+python3.14 --version        # Linux / macOS
+```
+
+```bash
+# Linux (Ubuntu / Debian) — deadsnakes PPA
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install python3.14 python3.14-venv
+
+# macOS — via Homebrew
+brew install python@3.14
+```
+
+### Création de l'environnement virtuel
+
+```powershell
+# Windows (PowerShell, depuis la racine du projet)
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+playwright install chromium       # uniquement si on relance ffe_crawler
+```
+
+```bash
+# Linux / macOS
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+playwright install chromium       # uniquement si on relance ffe_crawler
+```
+
+Pour quitter l'environnement plus tard : `deactivate`.
+
+---
+
 ## 🚀 Pipeline complet (de A à Z)
 
 ```bash
-# 0. Installation
-pip install -r requirements.txt
-playwright install chromium    # uniquement si on relance ffe_crawler
+# 0. Activation de l'environnement (voir Setup ci-dessus)
+.\.venv\Scripts\Activate.ps1     # Windows
+# source .venv/bin/activate      # Linux / macOS
 
 # 1. Lance le serveur web — un seul process pour les 4 pages
 uvicorn equirank.server:app --reload --port 8000
